@@ -3,7 +3,7 @@
 #include <Wire.h>
 
 void setup() {
-  Wire.begin();
+  Wire.begin(21, 22);  // SDA, SCL del ESP32 DevKit
   Serial.begin(115200);
   while (!Serial) {}
   Serial.println(F("Buscando dispositivos I2C..."));

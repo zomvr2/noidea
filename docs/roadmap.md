@@ -2,44 +2,47 @@
 
 Cada hito termina en algo demostrable. Marcar `[x]` al completar.
 
-## Hito 0 — Estructura (hecho)
-- [x] Monorepo npm workspaces: `app/`, `server/`, `packages/shared/`, `firmware/`, `docs/`
-- [x] Protocolo serial v1 definido y con tests
-- [x] Firmware base: nivel (HC-SR04 + respaldo resistivo), servo con seguridades, LCD
-- [x] Servidor base: config, SQLite + migración, seed, enlace serial / simulador, `/api/health`, `/api/tanks`, WebSocket
-- [x] App base: conexión al servidor y nivel del estanque en vivo
+## Hito 0 — Estructura
+- [x] Monorepo, AGENTS.md y documentación
+- [x] Rediseño a ESP32 + Vercel + Supabase (sin PC ni USB en el flujo)
 
-## Hito 1 — Hardware de nivel en banco
-- [ ] Montar HC-SR04, sensor resistivo y LCD; confirmar dirección I2C (0x27/0x3F)
-- [ ] Calibrar nivel vacío/lleno y umbral de respaldo ([hardware.md](hardware.md))
-- [ ] Ver el nivel real en la app vía servidor
-- [ ] Alerta `critical_level` + evento en tiempo real
+## Hito 1 — Nube base
+- [x] Esquema Supabase: tablas, RLS, funciones de saldo, Realtime, seed (`supabase/`)
+- [x] API Hono para Vercel: ubicar estanque, retiros, telemetría y eventos del dispositivo
+- [x] Simulador del ESP32 con el mismo protocolo
+- [ ] Crear proyecto Supabase y aplicar migraciones + seed
+- [ ] Crear proyecto Vercel (Root Directory `api`) y variables de entorno; primer despliegue
+- [ ] Usuarios de prueba (`npm run users:create -w api`)
+- [ ] Prueba punta a punta con el simulador
 
-## Hito 2 — Válvula con servo
-- [ ] Confirmar modelo de servo y construir el acople con la llave/manguera
-- [ ] Ajustar ángulos abierto/cerrado
-- [ ] Calibrar caudal por gravedad a 3 alturas y documentar el error
-- [ ] Probar cierres de seguridad: STOP, desconectar USB (LINK_LOST), respaldo seco
+## Hito 2 — Mapa y ubicación
+- [x] Login con Supabase Auth
+- [x] Mapa MapLibre + OpenFreeMap con nivel en vivo por estanque
+- [x] Ubicar estanque: NFC + GPS (admin)
+- [ ] Development build Android (`npx expo run:android`) y prueba con la tarjeta del kit
 
-## Hito 3 — Familias, sesiones y cuotas
-- [ ] Registro y login (teléfono + PIN, hash scrypt)
-- [ ] Panel admin: aprobar/rechazar familias, asignar cuota del período
-- [ ] Saldo visible en la app
+## Hito 3 — ESP32 en banco
+- [ ] Compilar y cargar firmware; confirmar dirección I2C de la LCD
+- [ ] Montar HC-SR04 (con divisor), sensor resistivo y LCD; calibrar
+- [ ] Ver el nivel real en el mapa
 
-## Hito 4 — Retiro completo con NFC
-- [ ] Development build con `react-native-nfc-manager`; leer UID de la tarjeta/llavero del kit
-- [ ] `POST /api/withdrawals` con todas las validaciones y reserva transaccional
-- [ ] Orquestación OPEN/RUN/DONE, progreso en vivo, comprobante "≈ X L (estimado)"
-- [ ] Verificación cruzada con diferencia de nivel
+## Hito 4 — Válvula con servo
+- [ ] Confirmar modelo de servo, acople con la llave, ángulos
+- [ ] Calibrar caudal a 3 alturas y documentar el error
+- [ ] Probar cierres: STOP, cortar Wi-Fi (LINK_LOST), respaldo seco, tope 60 s
 
-## Hito 5 — Recargas y municipio
-- [ ] Solicitud de recarga desde alerta, estados y seguimiento
-- [ ] Vista municipal
+## Hito 5 — Familias y retiros en la app
+- [ ] Registro de familia y validación por admin; asignación de cuotas
+- [ ] Pantalla de retiro: NFC → litros → progreso en vivo → comprobante "≈ X L (estimado)"
+- [ ] Historial y saldo
 
-## Hito 6 — Demo integrada
-- [ ] Guion de demostración, datos ficticios, checklist de seguridad
-- [ ] Lista explícita de limitaciones (sin caudalímetro, sin electroválvula, caudal variable)
+## Hito 6 — Alertas, recargas y municipio
+- [ ] Vista de alertas, solicitud y seguimiento de recarga por camión aljibe
+
+## Hito 7 — Demo integrada
+- [ ] Guion, checklist de seguridad y lista de limitaciones
 
 ## Pendiente por hardware no disponible
-- Caudalímetro → medición real del volumen (`measurementMethod: "flowmeter"`)
-- Electroválvula → control con relé (pin D2 reservado)
+- Caudalímetro → `measurementMethod: "flowmeter"` (GPIO 27 reservado)
+- Electroválvula → control con relé (GPIO 26 reservado)
+- TLS con certificados fijados en el ESP32

@@ -1,57 +1,36 @@
-# API HTTP y WebSocket
+# API (Vercel)
 
-Base: `http://<ip-del-pc>:3000`. JSON en todo. Autenticación: `Authorization: Bearer <token>`.
+Base: `https://<proyecto>.vercel.app/api` (local: `http://localhost:3000/api`). JSON.
 Errores: `{ "error": { "code": "INSUFFICIENT_BALANCE", "message": "..." } }`.
-
 Estado: ✅ implementado · 🚧 pendiente.
 
-## Sistema
+Las **lecturas** de la app (estanques, saldo, historial, alertas) van directo a Supabase con RLS, y el tiempo real
+con Supabase Realtime. La API solo expone lo que requiere reglas de negocio o la clave secreta.
+
+## App (`Authorization: Bearer <JWT de Supabase Auth>`)
+
 | Método | Ruta | Rol | Estado |
 |---|---|---|---|
-| GET | `/api/health` | público | ✅ estado del servidor y del enlace con Arduino |
+| GET | `/health` | público | ✅ |
+| POST | `/tanks/locate` | admin | ✅ `{ tagUid, latitude, longitude, accuracyM, name? }` → `Tank`. `404 TAG_UNKNOWN` si la etiqueta no existe y no viene `name` |
+| POST | `/withdrawals` | family | ✅ `{ tagUid, liters }` → `Withdrawal` (espera ACK del ESP32 hasta 8 s) |
+| POST | `/withdrawals/:id/stop` | dueño/admin | ✅ envía STOP; el cierre llega por DONE |
+| POST | `/families/register` | autenticado | 🚧 crea familia `pending` |
+| POST | `/families/:id/approve` · `/reject` | admin | 🚧 aprueba y asigna cuota |
+| PATCH | `/tanks/:id` | admin | 🚧 calibración / estado |
+| POST | `/alerts/:id/ack` | admin/municipal | 🚧 |
+| POST/PATCH | `/refills` | admin/municipal | 🚧 |
 
-## Autenticación
-| Método | Ruta | Rol | Estado |
-|---|---|---|---|
-| POST | `/api/auth/register` | público | 🚧 crea usuario + familia `pending` |
-| POST | `/api/auth/login` | público | 🚧 `{ phone, pin }` → `{ token, user }` |
-| GET | `/api/auth/me` | autenticado | 🚧 |
+## Dispositivo (firma HMAC, ver [protocolo-dispositivo.md](protocolo-dispositivo.md))
 
-## Familias y cuotas
-| Método | Ruta | Rol | Estado |
-|---|---|---|---|
-| GET | `/api/families` | admin | 🚧 filtro `?status=pending` |
-| POST | `/api/families/:id/approve` | admin | 🚧 aprueba y asigna cuota del período |
-| POST | `/api/families/:id/reject` | admin | 🚧 |
-| GET | `/api/families/:id/balance` | dueño/admin | 🚧 `QuotaBalance` |
+| Método | Ruta | Estado |
+|---|---|---|
+| POST | `/device/telemetry` | ✅ |
+| POST | `/device/events` | ✅ ACK, NAK, RUN, DONE |
 
-## Estanques
-| Método | Ruta | Rol | Estado |
-|---|---|---|---|
-| GET | `/api/tanks` | autenticado* | ✅ lista con último nivel |
-| GET | `/api/tanks/:id` | autenticado* | ✅ |
-| GET | `/api/tanks/by-tag/:uid` | autenticado | 🚧 resolver etiqueta NFC |
-| GET | `/api/tanks/:id/readings` | autenticado | 🚧 historial |
-| PATCH | `/api/tanks/:id` | admin | 🚧 calibración / estado |
+## Variables de entorno (Vercel)
 
-\* Mientras no exista auth, las rutas ✅ son públicas.
-
-## Retiros
-| Método | Ruta | Rol | Estado |
-|---|---|---|---|
-| POST | `/api/withdrawals` | family | 🚧 `{ tagUid, liters }` → `Withdrawal` (`authorized`) |
-| POST | `/api/withdrawals/:id/stop` | dueño/admin | 🚧 |
-| GET | `/api/withdrawals?familyId=` | dueño/admin | 🚧 historial y comprobantes |
-
-## Alertas y recargas
-| Método | Ruta | Rol | Estado |
-|---|---|---|---|
-| GET | `/api/alerts` | admin/municipal | 🚧 |
-| POST | `/api/alerts/:id/ack` | admin/municipal | 🚧 |
-| GET/POST | `/api/refills` | admin/municipal | 🚧 |
-| PATCH | `/api/refills/:id` | admin/municipal | 🚧 cambio de estado |
-
-## WebSocket `/ws`
-Al conectar el servidor envía `hello`. Luego eventos `ServerEvent`
-([`packages/shared/src/realtime.ts`](../packages/shared/src/realtime.ts)): `device.status`, `tank.level`,
-`tank.status`, `withdrawal.updated`, `alert.created`, `refill.updated`.
+| Variable | Valor |
+|---|---|
+| `SUPABASE_URL` | `https://<ref>.supabase.co` |
+| `SUPABASE_SECRET_KEY` | Clave secreta (`sb_secret_...`) — nunca en la app ni en el firmware |

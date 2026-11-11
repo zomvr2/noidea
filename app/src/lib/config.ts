@@ -1,8 +1,18 @@
 /**
- * URL del servidor local (PC). Se define en app/.env.local:
- *   EXPO_PUBLIC_SERVER_URL=http://192.168.1.50:3000
- * El servidor imprime su IP al arrancar. Teléfono y PC deben estar en la misma red Wi-Fi.
+ * Configuración pública de la app (app/.env.local, ver .env.example).
+ * Solo claves públicas: la clave secreta de Supabase vive únicamente en Vercel.
  */
-export const SERVER_URL = (process.env.EXPO_PUBLIC_SERVER_URL ?? "http://localhost:3000").replace(/\/$/, "");
+const required = (name: string, value: string | undefined) => {
+  if (!value) throw new Error(`Falta ${name} en app/.env.local`);
+  return value.replace(/\/$/, "");
+};
 
-export const WS_URL = SERVER_URL.replace(/^http/, "ws");
+export const SUPABASE_URL = required("EXPO_PUBLIC_SUPABASE_URL", process.env.EXPO_PUBLIC_SUPABASE_URL);
+export const SUPABASE_PUBLISHABLE_KEY = required(
+  "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
+  process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+);
+export const API_URL = required("EXPO_PUBLIC_API_URL", process.env.EXPO_PUBLIC_API_URL);
+
+/** Estilo base del mapa: OpenFreeMap (gratuito, sin clave). Atribución: OpenFreeMap © OpenMapTiles, datos © OpenStreetMap. */
+export const MAP_STYLE_URL = "https://tiles.openfreemap.org/styles/liberty";

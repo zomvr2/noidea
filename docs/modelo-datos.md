@@ -1,36 +1,49 @@
-# Modelo de datos (SQLite)
+# Modelo de datos (Supabase / Postgres)
 
-Esquema en [`server/src/db/migrations/`](../server/src/db/migrations/). Volúmenes en litros (REAL), fechas ISO UTC (TEXT).
+Esquema: [`supabase/migrations/`](../supabase/migrations/). Datos de prueba: [`supabase/seed.sql`](../supabase/seed.sql).
 
-| Tabla | Propósito | Campos clave |
-|---|---|---|
-| `users` | Personas que inician sesión | `phone` (único), `pin_hash`, `role` (`family`/`admin`/`municipal`), `family_id` |
-| `sessions` | Tokens de sesión opacos | `token_hash`, `user_id`, `expires_at` |
-| `families` | Grupo familiar | `name`, `sector`, `members`, `status` (`pending`/`approved`/`rejected`/`suspended`) |
-| `quotas` | Cuota por período | `family_id`, `period_start`, `period_end`, `allocated_l`, `used_l`, `reserved_l` |
-| `tanks` | Estanque + calibración | `nfc_tag_uid`, `capacity_l`, `empty_distance_mm`, `full_distance_mm`, `flow_lps`, `critical_percent`, `status` |
-| `level_readings` | Historial de nivel (muestreado) | `tank_id`, `distance_mm`, `volume_l`, `percent`, `backup_raw`, `source` (`device`/`simulator`) |
-| `withdrawals` | Retiros | `family_id`, `tank_id`, `requested_l`, `reserved_l`, `open_ms`, `delivered_l`, `measurement_method`, `level_delta_l`, `status`, `close_reason` |
-| `alerts` | Alertas | `tank_id`, `type`, `status`, `message` |
-| `refill_requests` | Recargas por camión aljibe | `tank_id`, `status`, `requested_volume_l`, `notes`, `created_by` |
-| `audit_log` | Acciones administrativas | `user_id`, `action`, `payload` |
+| Tabla | Propósito | Campos clave | Lectura desde la app (RLS) |
+|---|---|---|---|
+| `profiles` | Perfil de cada usuario de Auth (se crea con trigger) | `role`, `family_id` | Propio; admin todos |
+| `families` | Grupo familiar | `status` | Propia; admin/municipal |
+| `quotas` | Cuota por período | `allocated_l`, `used_l`, `reserved_l` | Propia; admin |
+| `tanks` | Estanque, calibración, **ubicación** y último nivel | `nfc_tag_uid`, `latitude`, `longitude`, `location_accuracy_m`, `level_*`, `device_last_seen_at` | Todos los autenticados |
+| `devices` | ESP32 de cada estanque | `id` (UUID), `secret`, `simulated` | Nadie (solo API) |
+| `level_readings` | Historial de nivel (cada 30 s) | `distance_mm`, `volume_l`, `percent` | Todos los autenticados |
+| `withdrawals` | Retiros | `target_ms`, `open_ms`, `progress_ms`, `delivered_l`, `level_delta_l`, `status` | Propios; admin |
+| `alerts` | Alertas | `type`, `status` | Admin/municipal |
+| `refill_requests` | Recargas por camión aljibe | `status` | Admin/municipal |
+| `audit_log` | Acciones administrativas | `action`, `payload` | Nadie (solo API) |
+
+Realtime publica cambios de `tanks`, `withdrawals`, `alerts`, `refill_requests` (respetando RLS).
+
+## Funciones de negocio (solo `service_role`)
+
+| Función | Qué hace |
+|---|---|
+| `authorize_withdrawal(familia, estanque, litros, usuario)` | Valida familia aprobada, estanque disponible y en línea, nivel, sin retiro activo y saldo; **reserva** saldo |
+| `start_withdrawal(id)` | `authorized → dispensing` al llegar el ACK |
+| `finish_withdrawal(id, open_ms, motivo, litros)` | Libera reserva y descuenta lo entregado (estimado) |
+| `reject_withdrawal(id, motivo)` | Libera reserva sin descontar (nunca se abrió) |
+| `expire_stale_withdrawals()` | Limpia retiros abandonados (sin ACK 30 s / sin DONE) |
+| `record_level(...)` | Nivel actual, historial, verificación cruzada y alertas críticas |
+
+Errores: `RAISE EXCEPTION '<CODIGO>'` (`INSUFFICIENT_BALANCE`, `DEVICE_OFFLINE`, `TANK_BUSY`, …).
 
 ## Reglas de saldo
 
 - `disponible = allocated_l − used_l − reserved_l` del período vigente.
-- Al autorizar: `reserved_l += requested_l` (en una transacción con la verificación).
-- Al terminar: `reserved_l −= requested_l`, `used_l += delivered_l` (delivered ≤ requested).
-- Al fallar/cancelar sin apertura: solo se libera la reserva.
+- Autorizar: `reserved_l += solicitado` (misma transacción que la verificación, con `FOR UPDATE`).
+- Terminar: `reserved_l −= solicitado`, `used_l += entregado` (entregado ≤ solicitado).
 
 ## Estados de un retiro
 
 ```
-authorized ──OPEN ACK──> dispensing ──DONE──> completed
-     │                        │
-     └─NAK/timeout──> failed  └─desconexión──> failed (se descuenta lo estimado si hubo RUN)
-     └─cancelación──> cancelled
+authorized ──ACK──> dispensing ──DONE TARGET/STOP──> completed
+     │                   └──DONE LINK_LOST/LOW_LEVEL/MAX_MS, o sin DONE──> failed (descuenta lo estimado)
+     └──NAK / sin ACK / envío fallido──> failed (sin descuento)
 ```
 
 ## Estados de una recarga
 
-`requested → scheduled → in_transit → delivered`, o `cancelled` desde cualquier estado previo a `delivered`.
+`requested → scheduled → in_transit → delivered`, o `cancelled` antes de `delivered`.

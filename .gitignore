@@ -4,9 +4,6 @@ node_modules/
 .env*.local
 !.env.example
 
-# Servidor
-server/data/
-server/dist/
 
 # Arduino
 firmware/**/build/
@@ -15,3 +12,6 @@ firmware/**/build/
 .DS_Store
 Thumbs.db
 npm-debug.*
+
+# Firmware: credenciales del ESP32
+firmware/**/secrets.h

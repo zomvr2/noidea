@@ -5,14 +5,15 @@
   "description": "Sistema inteligente de gestión y distribución de agua — prototipo",
   "workspaces": [
     "app",
-    "server",
+    "api",
     "packages/*"
   ],
   "scripts": {
-    "dev:server": "npm run dev -w server",
+    "dev:api": "npm run dev -w api",
     "dev:app": "npm run start -w app",
-    "typecheck": "npm run typecheck -w @noidea/shared -w server -w app",
-    "test": "npm run test -w @noidea/shared -w server"
+    "simulate": "npm run simulate -w api",
+    "typecheck": "npm run typecheck -w @noidea/shared -w api -w app",
+    "test": "npm run test -w @noidea/shared -w api"
   },
   "engines": {
     "node": ">=24"

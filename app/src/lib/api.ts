@@ -1,5 +1,12 @@
-import type { DeviceStatus, Tank } from "@noidea/shared";
-import { SERVER_URL } from "./config";
+import type {
+  ApiErrorBody,
+  CreateWithdrawalRequest,
+  CreateWithdrawalResponse,
+  LocateTankRequest,
+  LocateTankResponse,
+} from "@noidea/shared";
+import { API_URL } from "./config";
+import { supabase } from "./supabase";
 
 export class ApiError extends Error {
   constructor(
@@ -11,41 +18,31 @@ export class ApiError extends Error {
   }
 }
 
-let authToken: string | null = null;
-export function setAuthToken(token: string | null) {
-  authToken = token;
-}
-
-async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+/** Llama a la API en Vercel con el JWT de la sesión de Supabase. */
+async function request<T>(path: string, body?: unknown): Promise<T> {
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token;
   let res: Response;
   try {
-    res = await fetch(`${SERVER_URL}${path}`, {
-      ...init,
+    res = await fetch(`${API_URL}/api${path}`, {
+      method: body === undefined ? "GET" : "POST",
       headers: {
         "Content-Type": "application/json",
-        ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
-        ...init.headers,
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
+      body: body === undefined ? undefined : JSON.stringify(body),
     });
   } catch {
-    throw new ApiError(0, "NETWORK", `No se pudo conectar con el servidor (${SERVER_URL})`);
+    throw new ApiError(0, "NETWORK", "Sin conexión con el servidor.");
   }
-  const body = await res.json().catch(() => null);
+  const json = (await res.json().catch(() => null)) as (T & Partial<ApiErrorBody>) | null;
   if (!res.ok) {
-    throw new ApiError(res.status, body?.error?.code ?? "HTTP_ERROR", body?.error?.message ?? res.statusText);
+    throw new ApiError(res.status, json?.error?.code ?? "HTTP_ERROR", json?.error?.message ?? res.statusText);
   }
-  return body as T;
-}
-
-export interface Health {
-  ok: boolean;
-  serverTime: string;
-  hardwareMode: "serial" | "simulator";
-  device: DeviceStatus;
+  return json as T;
 }
 
 export const api = {
-  health: () => request<Health>("/api/health"),
-  tanks: () => request<Tank[]>("/api/tanks"),
-  tank: (id: number) => request<Tank>(`/api/tanks/${id}`),
+  locateTank: (req: LocateTankRequest) => request<LocateTankResponse>("/tanks/locate", req),
+  createWithdrawal: (req: CreateWithdrawalRequest) => request<CreateWithdrawalResponse>("/withdrawals", req),
 };

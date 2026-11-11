@@ -1,46 +1,46 @@
 # NoIdea
 
 Prototipo de sistema inteligente de gestión y distribución de agua para comunidades abastecidas por estanques
-comunitarios y camiones aljibe: app móvil + servidor local + Arduino Uno.
+comunitarios y camiones aljibe: **app móvil (Expo) + API en Vercel + Supabase + dispensador ESP32**.
+Los estanques se ven en un mapa (MapLibre + OpenFreeMap) con su nivel en tiempo real; su ubicación la marca un
+administrador escaneando la etiqueta NFC del estanque con el GPS del teléfono.
 
-> Prototipo a pequeña escala. Sin caudalímetro ni electroválvula: los volúmenes entregados son **estimaciones**.
-> No se usa agua para consumo humano.
+> Prototipo a pequeña escala. Sin caudalímetro ni electroválvula: niveles y volúmenes entregados son
+> **estimaciones**. No se usa agua para consumo humano.
 
-## Inicio rápido
+## Puesta en marcha
 
-Requisitos: Node.js 24+, Arduino IDE 2 (o `arduino-cli`), teléfono con Expo Go / development build en la misma Wi-Fi.
+1. **Supabase:** crear proyecto, aplicar `supabase/migrations/*.sql` y `supabase/seed.sql`.
+2. **API:** copiar `api/.env.example` a `api/.env.local` con `SUPABASE_URL` y `SUPABASE_SECRET_KEY`.
 
-```bash
-npm install
-```
+   ```bash
+   npm install
+   ```
 
-```bash
-cp server/.env.example server/.env
-```
+   ```bash
+   npm run users:create -w api
+   ```
 
-```bash
-npm run db:seed -w server
-```
+   ```bash
+   npm run dev:api
+   ```
 
-```bash
-npm run dev:server
-```
+3. **Vercel:** proyecto con Root Directory `api` y las mismas dos variables.
+4. **App:** copiar `app/.env.example` a `app/.env.local`; compilar el development build (MapLibre y NFC no
+   funcionan en Expo Go):
 
-En otra terminal, con `app/.env.local` apuntando a la IP que imprime el servidor:
+   ```bash
+   cd app && npx expo run:android
+   ```
 
-```bash
-npm run dev:app
-```
-
-Por defecto el servidor arranca con `HARDWARE_MODE=simulator`. Para usar el Arduino real: cargar el firmware
-([firmware/README.md](firmware/README.md)) y poner `HARDWARE_MODE=serial` en `server/.env`.
+5. **Dispensador:** ver [firmware/README.md](firmware/README.md). Sin hardware: `npm run simulate`.
 
 ## Documentación
 
 - [AGENTS.md](AGENTS.md) — reglas del proyecto (para personas y agentes de IA)
 - [docs/arquitectura.md](docs/arquitectura.md) — componentes y flujos
-- [docs/hardware.md](docs/hardware.md) — kit, pines, alimentación, calibración
-- [docs/protocolo-serial.md](docs/protocolo-serial.md) — protocolo servidor ↔ Arduino
-- [docs/modelo-datos.md](docs/modelo-datos.md) — base de datos y estados
-- [docs/api.md](docs/api.md) — API HTTP y WebSocket
+- [docs/hardware.md](docs/hardware.md) — ESP32, pines, alimentación, calibración
+- [docs/protocolo-dispositivo.md](docs/protocolo-dispositivo.md) — ESP32 ↔ nube
+- [docs/modelo-datos.md](docs/modelo-datos.md) — base de datos, RLS y funciones
+- [docs/api.md](docs/api.md) — API en Vercel
 - [docs/roadmap.md](docs/roadmap.md) — hitos y estado

@@ -2,70 +2,71 @@
 
 ## Componentes
 
-### 1. App móvil (`app/`)
-Expo + React Native + TypeScript, navegación con Expo Router. Se conecta por Wi-Fi al servidor del PC
-(`EXPO_PUBLIC_SERVER_URL`, p. ej. `http://192.168.1.50:3000`).
+| Componente | Dónde corre | Responsabilidad |
+|---|---|---|
+| App (`app/`) | Teléfono (Android; development build) | Login, mapa de estanques, NFC + GPS, retiros |
+| API (`api/`) | Vercel (funciones Node 24, Fluid compute) | Reglas de negocio, órdenes al ESP32, telemetría |
+| Supabase | Nube | Postgres + RLS, Auth, Realtime |
+| Dispensador (`firmware/noidea_esp32`) | ESP32 DevKit por Wi-Fi | Sensores, servo-válvula, LCD, seguridad local |
 
-- Familias: registro, saldo, retiro con NFC, comprobantes, estado del estanque.
-- Administrador comunitario: validar familias, asignar cuotas, ver alertas, gestionar recargas.
-- Municipal: ver alertas de nivel crítico y seguimiento de recargas.
+### Por qué este reparto
 
-**NFC:** la app lee el UID de la etiqueta pegada en el dispensador con `react-native-nfc-manager`.
-Requiere *development build* (no funciona en Expo Go). Como etiqueta se pueden usar la tarjeta o el llavero
-del kit RFID (13,56 MHz, MIFARE Classic): Android lee el UID de la mayoría; iPhone no lee MIFARE Classic, por lo
-que para iOS se necesitaría una etiqueta NTAG213/215. La app solo envía el UID; el servidor lo resuelve a un estanque.
+- **Vercel no mantiene conexiones abiertas** (sin WebSocket propio ni procesos permanentes). Por eso el tiempo real
+  lo da **Supabase Realtime**: la app escucha cambios de tablas y el ESP32 escucha órdenes en un canal Broadcast.
+- **El ESP32 tiene Wi-Fi**: habla directo con la nube; ya no hace falta un PC con puerto USB.
+- **La lógica de saldo es transaccional en Postgres** (`authorize_withdrawal`, `finish_withdrawal`, …) para que dos
+  peticiones simultáneas no gasten dos veces el mismo saldo. La API valida, autoriza y orquesta.
 
-### 2. Servidor local (`server/`)
-Node.js 24 + TypeScript, Fastify.
+### Quién usa qué clave
 
-- API HTTP REST bajo `/api` (ver [api.md](api.md)).
-- WebSocket en `/ws` para empujar eventos (`ServerEvent` en `packages/shared/src/realtime.ts`).
-- SQLite con el módulo nativo `node:sqlite` (sin compilación nativa), archivo en `server/data/noidea.db`.
-- Enlace serial permanente con el Arduino (`serialport`), reconexión automática, PING cada 1 s.
-- Modo `simulator` para desarrollar sin Arduino (datos marcados como simulados).
+| Actor | Credencial | Acceso |
+|---|---|---|
+| App | Clave pública + JWT del usuario | Lecturas con RLS, Realtime de tablas, API con `Authorization: Bearer` |
+| API | Clave secreta (solo en Vercel) | Todo; ejecuta funciones de negocio |
+| ESP32 | Clave pública (solo Realtime) + secreto propio | Recibe órdenes firmadas; firma sus peticiones a la API |
 
-Módulos de dominio en `server/src/modules/`: `auth`, `families`, `quotas`, `tanks`, `withdrawals`, `alerts`, `refills`.
-Infraestructura: `db/`, `hardware/`, `realtime/`, `config.ts`.
+## Flujo: ubicar un estanque (admin)
 
-### 3. Arduino Uno (`firmware/`)
-Controla los dispositivos físicos y aplica seguridad local. No guarda datos de familias.
-Ver [hardware.md](hardware.md) y [protocolo-serial.md](protocolo-serial.md).
+1. El admin abre «Ubicar estanque», se para junto al estanque y escanea su etiqueta NFC.
+2. La app obtiene el GPS (precisión máxima; rechaza > 50 m) y llama `POST /api/tanks/locate`.
+3. La API guarda `latitude`, `longitude`, `location_accuracy_m`, quién y cuándo. Si la etiqueta no existe, pide un
+   nombre y crea el estanque con calibración por defecto.
+4. Realtime actualiza el mapa de todos los usuarios.
 
-## Flujo de un retiro
+## Flujo: retiro de agua
 
 ```
-App                         Servidor                                   Arduino
- |  lee UID NFC               |                                           |
- |-- POST /api/withdrawals -->|  valida: familia aprobada, saldo,         |
- |   {tagUid, liters}         |  estanque disponible, sin retiro activo,  |
- |                            |  nivel suficiente  -> reserva saldo       |
- |<-- 201 authorized ---------|                                           |
- |                            |-- OPEN <id> <ms> ------------------------>|  servo abre
- |                            |<------------------------- ACK cmd=OPEN ---|
- |<== ws withdrawal.updated ==|<------------------- RUN id= ms= (c/500ms) |
- |                            |<------------- DONE id= ms= r=TARGET ------|  servo cierra
- |                            |  delivered ≈ ms × caudal calibrado        |
- |                            |  libera reserva, descuenta lo entregado   |
- |<== ws withdrawal.updated ==|  (completed + comprobante)                |
+App            API (Vercel)                     Supabase                        ESP32
+ | NFC tagUid    |                                 |                               |
+ |-POST /withdrawals->| rpc authorize_withdrawal -->| reserva saldo (transacción)  |
+ |               |-- Broadcast OPEN firmado ------>|------ canal device:<id> ----->| verifica HMAC, ts, id
+ |               |                                 |<----- POST /device/events ACK-| servo abre
+ |               |<-- (espera ACK hasta 8 s) ------| start_withdrawal              |
+ |<-- 201 dispensing                               |<----- RUN cada 2 s -----------|
+ |<== Realtime: withdrawals.progress_ms ===========|                               |
+ |               |                                 |<----- DONE ms=... r=TARGET ---| servo cierra
+ |               |  entregado ≈ ms × caudal        | finish_withdrawal: descuenta  |
+ |<== Realtime: withdrawal completed ==============|                               |
 ```
 
-- `ms = litros solicitados / caudal calibrado (L/s) × 1000`, acotado a 60 000 ms.
-- Si llega `DONE` con `r` distinto de `TARGET`, se descuenta solo lo estimado para el tiempo realmente abierto.
-- Si el Arduino se desconecta durante un retiro, el retiro queda `failed` y la reserva se libera; el firmware
-  cierra por su cuenta tras 3 s sin enlace (`LINK_LOST`).
-- Solo un retiro activo por estanque (la válvula es una sola).
+- `target_ms = litros / caudal_calibrado × 1000`, tope 60 000 ms.
+- Sin ACK en 8 s → `reject_withdrawal('NO_ACK')`. Un ACK tardío de un retiro ya rechazado provoca un STOP.
+- `expire_stale_withdrawals()` (llamada desde la API) cierra retiros abandonados: `dispensing` sin DONE se cierra
+  descontando lo solicitado (conservador) y genera alerta.
+- El ESP32 cierra solo si el enlace Realtime cae 3 s (`LINK_LOST`).
 
-## Monitoreo de nivel
+## Flujo: monitoreo de nivel
 
-1. El Arduino envía `LVL d=<mm> b=<raw> low=<0|1>` periódicamente (cada 2 s) y bajo pedido (`LEVEL`).
-2. El servidor convierte distancia a volumen con la geometría del estanque (ver [hardware.md](hardware.md)),
-   suaviza con mediana de las últimas lecturas, guarda una muestra cada 30 s y emite `tank.level`.
-3. Si el porcentaje cae bajo `critical_percent` o el sensor resistivo de respaldo indica fondo seco, se crea
-   una alerta `critical_level` (una sola alerta abierta por estanque) y se puede crear una solicitud de recarga.
+1. El ESP32 envía `POST /api/device/telemetry` cada 10 s (distancia HC-SR04 + sensor de respaldo).
+2. La API convierte distancia → litros con la calibración del estanque y llama `record_level`.
+3. `record_level` actualiza el nivel actual del estanque, guarda historial cada 30 s, completa la verificación
+   cruzada del último retiro y abre/resuelve alertas `critical_level` (histéresis de 5 puntos).
+4. La app recibe el cambio de `tanks` por Realtime y recolorea el mapa.
+5. Un estanque sin telemetría por 35 s se muestra «sin conexión».
 
-## Modos de hardware
+## Mapa
 
-| `HARDWARE_MODE` | Uso |
-|---|---|
-| `serial` | Arduino real en `SERIAL_PORT` (p. ej. `COM3`). Vacío = autodetección por VID de Arduino. |
-| `simulator` | Sin Arduino. Responde al protocolo con un estanque ficticio. La app muestra banner "SIMULADOR". |
+MapLibre React Native 11 con el estilo **OpenFreeMap Liberty** (`https://tiles.openfreemap.org/styles/liberty`),
+gratuito y sin clave. Cada estanque ubicado es un círculo coloreado por estado (azul ok, ámbar bajo, rojo crítico,
+gris sin conexión), con un núcleo proporcional al nivel y etiqueta «nombre ≈ NN%». Atribución: OpenFreeMap
+© OpenMapTiles, datos © colaboradores de OpenStreetMap (MapLibre muestra el botón de atribución).

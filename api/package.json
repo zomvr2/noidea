@@ -1,0 +1,30 @@
+{
+  "name": "api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "API de NoIdea (Hono en Vercel). Proyecto Vercel con Root Directory = api",
+  "scripts": {
+    "dev": "tsx watch --env-file-if-exists=.env.local scripts/dev-server.ts",
+    "simulate": "tsx --env-file-if-exists=.env.local scripts/device-simulator.ts",
+    "users:create": "tsx --env-file-if-exists=.env.local scripts/create-test-users.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@noidea/shared": "*",
+    "@supabase/supabase-js": "^2.119.0",
+    "hono": "^4.13.18",
+    "zod": "^4.1.0"
+  },
+  "devDependencies": {
+    "@hono/node-server": "^1.19.0",
+    "@types/node": "^24.0.0",
+    "tsx": "^4.20.0",
+    "typescript": "~6.0.3",
+    "vitest": "^3.2.4"
+  },
+  "engines": {
+    "node": "24.x"
+  }
+}

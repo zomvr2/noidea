@@ -42,18 +42,18 @@ Docs: https://docs.expo.dev/eas/index.md
 
 ## NoIdea — reglas de la app
 
-Lee también el `AGENTS.md` de la raíz del monorepo (arquitectura, honestidad de mediciones, protocolo).
+Lee también el `AGENTS.md` de la raíz (arquitectura, honestidad de mediciones, protocolo).
 
-- La app es un cliente: **nunca** decide autorizaciones ni calcula saldos; todo lo pide al servidor (`src/lib/api.ts`).
-- Tipos de red (`Tank`, `Withdrawal`, `ServerEvent`...) se importan de `@noidea/shared`; no se redefinen aquí.
-- Tiempo real: `useRealtime` (`src/lib/realtime.ts`) sobre el WebSocket `/ws` del servidor.
-- Volúmenes entregados y niveles se muestran como estimación: "≈ 1,2 L (estimado)". Si `device.link === "simulated"`,
-  mostrar banner "SIMULADOR".
-- URL del servidor en `app/.env.local` → `EXPO_PUBLIC_SERVER_URL=http://<ip-del-pc>:3000` (ver `.env.example`).
-- Estructura: `src/app/` solo rutas; `src/features/<dominio>/` hooks y componentes por dominio; `src/lib/` cliente
-  HTTP/WS y utilidades; `src/components/` UI genérica; `src/theme.ts` colores.
-- **NFC** (hito 4): `react-native-nfc-manager` vía `npx expo install` + config plugin en `app.json`. Requiere
-  development build (`npx expo run:android` o EAS); Expo Go no lo soporta. Leer solo el UID (NfcA/MIFARE Classic de
-  la tarjeta del kit en Android; NTAG21x para iPhone).
-- Android bloquea HTTP sin TLS en builds de release: para el servidor local habrá que habilitar cleartext con
-  `expo-build-properties` (`android.usesCleartextTraffic: true`) cuando se haga el development build.
+- La app es un cliente. **Lecturas** con `supabase` (`src/lib/supabase.ts`, RLS) y **tiempo real** con Supabase
+  Realtime (`postgres_changes`). **Escrituras de negocio** solo vía la API en Vercel (`src/lib/api.ts`).
+  Nunca usar ni incluir la clave secreta de Supabase.
+- Tipos y mapeo de filas (`toTank`, `TANK_COLUMNS`...) se importan de `@noidea/shared`; no se redefinen aquí.
+- Variables en `app/.env.local` (ver `.env.example`): `EXPO_PUBLIC_SUPABASE_URL`,
+  `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `EXPO_PUBLIC_API_URL`.
+- **Mapa:** `@maplibre/maplibre-react-native` v11 (componentes `Map`, `Camera`, `GeoJSONSource`, `Layer type=...`;
+  no usar la API v10 `MapView`/`ShapeSource`/`CircleLayer`). Estilo OpenFreeMap Liberty; fuentes disponibles para
+  etiquetas: "Noto Sans Regular/Bold/Italic".
+- **NFC:** `react-native-nfc-manager` (`src/features/nfc`), solo UID. **GPS:** `expo-location`.
+- MapLibre y NFC son módulos nativos: **no funcionan en Expo Go**. Usar `npx expo run:android` o EAS development build.
+- Niveles y volúmenes se muestran como estimación ("≈ 1,2 L · estimado"). Si `tank.simulated`, banner "SIMULADOR".
+- Estructura: `src/app/` solo rutas; `src/features/<dominio>/`; `src/lib/`; `src/components/`; `src/theme.ts`.

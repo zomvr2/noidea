@@ -1,46 +1,51 @@
-import type { DeviceStatus, ServerEvent, Tank } from "@noidea/shared";
+import { TANK_COLUMNS, type Tank, type TankRow, toTank } from "@noidea/shared";
 import { useCallback, useEffect, useState } from "react";
-import { api } from "@/lib/api";
-import { useRealtime } from "@/lib/realtime";
+import { supabase } from "@/lib/supabase";
 
-/** Lista de estanques con nivel actualizado en tiempo real. */
-export function useTanks() {
+/**
+ * Estanques con su ubicación y nivel, actualizados en tiempo real
+ * (Supabase Realtime sobre la tabla tanks; RLS: cualquier usuario autenticado).
+ */
+export function useTanks(enabled: boolean) {
   const [tanks, setTanks] = useState<Tank[]>([]);
-  const [device, setDevice] = useState<DeviceStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [loaded, setLoaded] = useState(false);
 
   const load = useCallback(async () => {
-    try {
-      const [health, list] = await Promise.all([api.health(), api.tanks()]);
-      setDevice(health.device);
-      setTanks(list);
+    const { data, error: err } = await supabase.from("tanks").select(TANK_COLUMNS).order("id").returns<TankRow[]>();
+    if (err) setError(err.message);
+    else {
+      setTanks(data.map(toTank));
       setError(null);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Error desconocido");
     }
+    setLoaded(true);
   }, []);
 
   useEffect(() => {
+    if (!enabled) return;
     void load();
-  }, [load]);
+    const channel = supabase
+      .channel("tanks-map")
+      .on("postgres_changes", { event: "*", schema: "public", table: "tanks" }, (change) => {
+        if (change.eventType === "DELETE") {
+          const oldId = (change.old as { id?: number }).id;
+          setTanks((prev) => prev.filter((t) => t.id !== oldId));
+          return;
+        }
+        const updated = toTank(change.new as TankRow);
+        setTanks((prev) => {
+          const i = prev.findIndex((t) => t.id === updated.id);
+          if (i === -1) return [...prev, updated];
+          const next = [...prev];
+          next[i] = updated;
+          return next;
+        });
+      })
+      .subscribe();
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [enabled, load]);
 
-  const connected = useRealtime((event: ServerEvent) => {
-    switch (event.type) {
-      case "hello":
-        setDevice(event.device);
-        void load();
-        break;
-      case "device.status":
-        setDevice(event.device);
-        break;
-      case "tank.level":
-        setTanks((prev) => prev.map((t) => (t.id === event.tankId ? { ...t, level: event.level } : t)));
-        break;
-      case "tank.status":
-        setTanks((prev) => prev.map((t) => (t.id === event.tankId ? { ...t, status: event.status } : t)));
-        break;
-    }
-  });
-
-  return { tanks, device, error, connected, reload: load };
+  return { tanks, error, loaded, reload: load };
 }
