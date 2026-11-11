@@ -1,0 +1,361 @@
+{
+  "version": 1,
+  "author": "NoIdea",
+  "editor": "wokwi",
+  "parts": [
+    {
+      "type": "board-esp32-devkit-c-v4",
+      "id": "esp",
+      "top": 0,
+      "left": 0,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-lcd1602",
+      "id": "lcd",
+      "top": -330,
+      "left": 230,
+      "attrs": {
+        "pins": "i2c",
+        "i2cAddress": "0x27"
+      }
+    },
+    {
+      "type": "wokwi-hc-sr04",
+      "id": "ultrasonic",
+      "top": -160,
+      "left": 300,
+      "attrs": {
+        "distance": "100"
+      }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r_echo_1k",
+      "top": 90,
+      "left": 180,
+      "attrs": {
+        "value": "1000"
+      }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r_echo_2k",
+      "top": 149.25,
+      "left": 150.25,
+      "rotate": 90,
+      "attrs": {
+        "value": "2000"
+      }
+    },
+    {
+      "type": "wokwi-servo",
+      "id": "servo",
+      "top": 200,
+      "left": 230,
+      "rotate": 180,
+      "attrs": {
+        "horn": "single"
+      }
+    },
+    {
+      "type": "wokwi-potentiometer",
+      "id": "water_sensor",
+      "top": -60,
+      "left": -200,
+      "attrs": {
+        "value": "800"
+      }
+    },
+    {
+      "type": "wokwi-relay-module",
+      "id": "relay",
+      "top": 140,
+      "left": -280,
+      "rotate": 180,
+      "attrs": {
+        "transistor": "pnp"
+      }
+    },
+    {
+      "type": "wokwi-text",
+      "id": "txt_rail_top",
+      "top": 342,
+      "left": 200,
+      "attrs": {
+        "text": "+5 V USB / GND"
+      }
+    },
+    {
+      "type": "wokwi-text",
+      "id": "txt_rail_bot",
+      "top": 575,
+      "left": -220,
+      "attrs": {
+        "text": "Riel inferior: + = 5 V FUENTE EXTERNA (>=1 A, solo servo) | - = GND. Puente GND entre rieles (col. 3). C 470 uF entre + y - junto al servo."
+      }
+    },
+    {
+      "type": "wokwi-text",
+      "id": "txt_div",
+      "top": 135,
+      "left": 195,
+      "attrs": {
+        "text": "Divisor ECHO 1k/2k"
+      }
+    },
+    {
+      "type": "wokwi-text",
+      "id": "txt_ws",
+      "top": -90,
+      "left": -330,
+      "attrs": {
+        "text": "Sensor resistivo (representado con potenciometro)"
+      }
+    },
+    {
+      "type": "wokwi-text",
+      "id": "txt_relay",
+      "top": 118,
+      "left": -300,
+      "attrs": {
+        "text": "Rele RESERVADO (GPIO 26)"
+      }
+    },
+    {
+      "type": "wokwi-text",
+      "id": "txt_flow",
+      "top": -200,
+      "left": -330,
+      "attrs": {
+        "text": "Sin conectar: GPIO 27 (caudalimetro PENDIENTE)"
+      }
+    },
+    {
+      "type": "wokwi-text",
+      "id": "txt_servo",
+      "top": 178,
+      "left": 240,
+      "attrs": {
+        "text": "Servo: 5 V EXTERNA"
+      }
+    },
+    {
+      "type": "wokwi-breadboard",
+      "id": "bb",
+      "top": 360,
+      "left": -220,
+      "attrs": {}
+    }
+  ],
+  "connections": [
+    [
+      "esp:TX",
+      "$serialMonitor:RX",
+      "",
+      []
+    ],
+    [
+      "esp:RX",
+      "$serialMonitor:TX",
+      "",
+      []
+    ],
+    [
+      "esp:5V",
+      "bb:tp.17",
+      "red",
+      [
+        "v170"
+      ]
+    ],
+    [
+      "esp:GND.1",
+      "bb:tn.14",
+      "black",
+      [
+        "h-35",
+        "v228"
+      ]
+    ],
+    [
+      "esp:21",
+      "lcd:SDA",
+      "blue",
+      [
+        "h99",
+        "v-356"
+      ]
+    ],
+    [
+      "esp:22",
+      "lcd:SCL",
+      "purple",
+      [
+        "h89",
+        "v-317"
+      ]
+    ],
+    [
+      "esp:GND.2",
+      "lcd:GND",
+      "black",
+      [
+        "h59",
+        "v-327"
+      ]
+    ],
+    [
+      "bb:tp.50",
+      "lcd:VCC",
+      "red",
+      [
+        "h177.2",
+        "v-732",
+        "h-410",
+        "v72"
+      ]
+    ],
+    [
+      "esp:23",
+      "ultrasonic:TRIG",
+      "gold",
+      [
+        "h280"
+      ]
+    ],
+    [
+      "esp:19",
+      "r_echo_1k:1",
+      "limegreen",
+      []
+    ],
+    [
+      "r_echo_1k:2",
+      "ultrasonic:ECHO",
+      "limegreen",
+      [
+        "h152"
+      ]
+    ],
+    [
+      "r_echo_1k:1",
+      "r_echo_2k:1",
+      "limegreen",
+      []
+    ],
+    [
+      "r_echo_2k:2",
+      "bb:tn.32",
+      "black",
+      [
+        "v198"
+      ]
+    ],
+    [
+      "ultrasonic:GND",
+      "bb:tn.50",
+      "black",
+      [
+        "v447"
+      ]
+    ],
+    [
+      "ultrasonic:VCC",
+      "bb:tp.49",
+      "red",
+      [
+        "v437"
+      ]
+    ],
+    [
+      "esp:18",
+      "servo:PWM",
+      "green",
+      [
+        "h339",
+        "v146.3"
+      ]
+    ],
+    [
+      "servo:V+",
+      "bb:bp.50",
+      "orange",
+      [
+        "h67.4",
+        "v284.7"
+      ]
+    ],
+    [
+      "servo:GND",
+      "bb:bn.50",
+      "black",
+      [
+        "h77.4",
+        "v284.7"
+      ]
+    ],
+    [
+      "bb:tn.3",
+      "bb:bn.3",
+      "black",
+      [
+        "v174"
+      ]
+    ],
+    [
+      "esp:34",
+      "water_sensor:SIG",
+      "cyan",
+      [
+        "h-166"
+      ]
+    ],
+    [
+      "esp:25",
+      "water_sensor:VCC",
+      "magenta",
+      [
+        "h-156"
+      ]
+    ],
+    [
+      "water_sensor:GND",
+      "bb:tn.1",
+      "black",
+      [
+        "v21",
+        "h-129",
+        "v352"
+      ]
+    ],
+    [
+      "esp:26",
+      "relay:IN",
+      "gray",
+      [
+        "h-105",
+        "v46.1"
+      ]
+    ],
+    [
+      "relay:VCC",
+      "bb:tp.9",
+      "red",
+      [
+        "h60.1",
+        "v191.9"
+      ]
+    ],
+    [
+      "relay:GND",
+      "bb:tn.10",
+      "black",
+      [
+        "h70.1",
+        "v211.9"
+      ]
+    ]
+  ],
+  "dependencies": {}
+}

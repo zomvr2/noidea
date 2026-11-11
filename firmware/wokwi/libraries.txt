@@ -1,0 +1,3 @@
+# Librerías del banco de pruebas (Wokwi las instala desde aquí)
+ESP32Servo
+LiquidCrystal I2C

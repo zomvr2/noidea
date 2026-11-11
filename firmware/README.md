@@ -3,6 +3,7 @@
 | Carpeta | Qué es |
 |---|---|
 | `noidea_esp32/` | Firmware del dispensador: nivel, servo-válvula, LCD, Wi-Fi, Supabase Realtime y API |
+| `wokwi/` | Circuito para Wokwi (`diagram.json`) y banco de pruebas del cableado |
 | `tools/i2c_scanner/` | Encuentra la dirección I2C de la LCD (en el ESP32: `Wire.begin(21, 22)`) |
 
 ## Preparar
