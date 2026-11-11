@@ -25,7 +25,10 @@ administrador escaneando la etiqueta NFC del estanque con el GPS del teléfono.
    npm run dev:api
    ```
 
-3. **Vercel:** proyecto con Root Directory `api` y las mismas dos variables.
+3. **Vercel:** proyecto `noidea-api` (Root Directory `api`, Node 24) con las mismas dos variables.
+   Producción: `https://noidea-api.vercel.app`. Se despliega desde la raíz del monorepo
+   (`npx vercel deploy --prod`): `.vercelignore` limita la subida a `api/` y `packages/`, y
+   `api/vercel.json` incluye `packages/shared/src/index.ts` en la función (Node 24 lo ejecuta sin compilar).
 4. **App:** copiar `app/.env.example` a `app/.env.local`; compilar el development build (MapLibre y NFC no
    funcionan en Expo Go):
 

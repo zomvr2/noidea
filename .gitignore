@@ -15,3 +15,8 @@ npm-debug.*
 
 # Firmware: credenciales del ESP32
 firmware/**/secrets.h
+
+# Vercel CLI (vercel link)
+.vercel
+.env*
+!.env.example

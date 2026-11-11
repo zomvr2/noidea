@@ -10,10 +10,11 @@ Cada hito termina en algo demostrable. Marcar `[x]` al completar.
 - [x] Esquema Supabase: tablas, RLS, funciones de saldo, Realtime, seed (`supabase/`)
 - [x] API Hono para Vercel: ubicar estanque, retiros, telemetría y eventos del dispositivo
 - [x] Simulador del ESP32 con el mismo protocolo
-- [ ] Crear proyecto Supabase y aplicar migraciones + seed
-- [ ] Crear proyecto Vercel (Root Directory `api`) y variables de entorno; primer despliegue
-- [ ] Usuarios de prueba (`npm run users:create -w api`)
-- [ ] Prueba punta a punta con el simulador
+- [x] Crear proyecto Supabase y aplicar migraciones + seed
+- [x] Crear proyecto Vercel (Root Directory `api`) y variables de entorno; primer despliegue
+      (`https://noidea-api.vercel.app`)
+- [x] Usuarios de prueba (`npm run users:create -w api`)
+- [x] Prueba punta a punta con el simulador (estanque `FFFFFFFF`, dispositivo `simulated = true`)
 
 ## Hito 2 — Mapa y ubicación
 - [x] Login con Supabase Auth

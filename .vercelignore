@@ -1,0 +1,11 @@
+# Vercel solo despliega la API (Root Directory = api). Subir lo mínimo del monorepo.
+/*
+!/package.json
+!/package-lock.json
+!/api
+!/packages
+/api/node_modules
+/api/.env*
+!/api/.env.example
+/packages/*/node_modules
+**/*.test.ts

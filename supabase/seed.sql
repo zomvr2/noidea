@@ -9,6 +9,12 @@ values ('Estanque prototipo', '00000000', 8, 250, 60, 0.05, 20);
 insert into public.devices (tank_id)
 select id from public.tanks where nfc_tag_uid = '00000000';
 
+-- Estanque + dispositivo SOLO para el simulador (npm run simulate). La app lo marca "SIMULADOR".
+insert into public.tanks (name, nfc_tag_uid, capacity_l, empty_distance_mm, full_distance_mm, flow_lps, critical_percent)
+values ('Estanque simulador', 'FFFFFFFF', 8, 250, 60, 0.05, 20);
+insert into public.devices (tank_id, simulated)
+select id, true from public.tanks where nfc_tag_uid = 'FFFFFFFF';
+
 insert into public.families (name, sector, members, status) values
   ('Familia Rojas', 'Sector Norte', 4, 'approved'),
   ('Familia Araya', 'Sector Sur',   2, 'approved'),
