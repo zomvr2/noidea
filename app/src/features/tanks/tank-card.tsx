@@ -1,42 +1,106 @@
 import type { Tank } from "@noidea/shared";
-import { StyleSheet, Text, View } from "react-native";
-import { colors } from "@/theme";
-import { LEVEL_COLORS, LEVEL_LABELS, levelState, levelText } from "./tank-status";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import { SimulatorBadge } from "@/components/banner";
+import { Button } from "@/components/button";
+import { Icon } from "@/components/icon";
+import { LevelBar } from "@/components/level-bar";
+import { colors, radius } from "@/theme";
+import { formatLitres, LEVEL_ICONS, LEVEL_LABELS, type LevelState, levelState, percentText, timeAgo } from "./tank-status";
 
-export function TankCard({ tank }: { tank: Tank }) {
-  const state = levelState(tank);
-  const percent = Math.max(0, Math.min(100, tank.level.percent ?? 0));
+/** Colores de estado legibles sobre la tarjeta verde oscuro. */
+const ON_DARK: Record<LevelState, string> = {
+  ok: colors.accent,
+  low: "#FFC966",
+  critical: "#FF8F80",
+  unknown: "rgba(255,255,255,0.6)",
+  offline: "rgba(255,255,255,0.6)",
+};
+
+interface Props {
+  tank: Tank;
+  now: number;
+  onDetails?: () => void;
+  onClose?: () => void;
+}
+
+/** Tarjeta destacada de un estanque (verde profundo, como las tarjetas de la referencia). */
+export function TankCard({ tank, now, onDetails, onClose }: Props) {
+  const state = levelState(tank, now);
+  const tone = ON_DARK[state];
+  const hasLevel = tank.level.volumeL !== null && state !== "offline";
 
   return (
     <View style={styles.card}>
       <View style={styles.header}>
-        <Text style={styles.title}>{tank.name}</Text>
-        {tank.simulated && <Text style={styles.sim}>SIMULADOR</Text>}
+        <View style={styles.headerText}>
+          <View style={styles.statusRow}>
+            <Icon name={LEVEL_ICONS[state]} size={13} color={tone} />
+            <Text style={[styles.overline, { color: tone }]}>
+              {LEVEL_LABELS[state]} · {timeAgo(tank.level.measuredAt ?? tank.deviceLastSeenAt, now)}
+            </Text>
+          </View>
+          <Text style={styles.title} numberOfLines={1}>
+            {tank.name}
+          </Text>
+        </View>
+        {tank.simulated && <SimulatorBadge onDark />}
+        {onClose && (
+          <Pressable
+            onPress={onClose}
+            hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel="Cerrar"
+            style={styles.close}
+          >
+            <Icon name="close" size={16} color={colors.onPrimary} />
+          </Pressable>
+        )}
       </View>
-      <View style={styles.bar}>
-        <View style={[styles.fill, { width: `${percent}%`, backgroundColor: LEVEL_COLORS[state] }]} />
+
+      <View style={styles.stats}>
+        <View>
+          <Text style={styles.statLabel}>Nivel estimado</Text>
+          <Text style={styles.statValue}>{hasLevel ? `≈ ${formatLitres(tank.level.volumeL!)}` : "—"}</Text>
+        </View>
+        <View style={styles.statRight}>
+          <Text style={styles.statLabel}>Capacidad</Text>
+          <Text style={styles.statValue}>{formatLitres(tank.capacityL)}</Text>
+        </View>
       </View>
-      <Text style={styles.value}>{levelText(tank)}</Text>
-      <Text style={[styles.state, { color: LEVEL_COLORS[state] }]}>{LEVEL_LABELS[state]}</Text>
-      {tank.level.sensorError && <Text style={styles.muted}>Error de sensor: {tank.level.sensorError}</Text>}
-      {tank.level.measuredAt && (
-        <Text style={styles.muted}>Actualizado {new Date(tank.level.measuredAt).toLocaleTimeString()}</Text>
-      )}
-      {tank.location?.accuracyM != null && (
-        <Text style={styles.muted}>Ubicación marcada con precisión ±{Math.round(tank.location.accuracyM)} m</Text>
-      )}
+
+      <LevelBar
+        percent={hasLevel ? tank.level.percent : null}
+        color={state === "ok" ? colors.accent : tone}
+        trackColor="rgba(255,255,255,0.14)"
+      />
+      <Text style={styles.footnote}>
+        {hasLevel ? `${percentText(tank, state)} · estimado por sensor ultrasónico` : "Sin lectura confiable del nivel"}
+      </Text>
+
+      {onDetails && <Button label="Ver detalle" variant="onPrimary" onPress={onDetails} style={styles.button} />}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  card: { backgroundColor: colors.surface, borderRadius: 12, padding: 16, gap: 6 },
-  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  title: { fontSize: 18, fontWeight: "600", color: colors.text },
-  sim: { fontSize: 11, fontWeight: "700", color: "#fff", backgroundColor: colors.warning, paddingHorizontal: 6, borderRadius: 4 },
-  bar: { height: 14, borderRadius: 7, backgroundColor: colors.track, overflow: "hidden" },
-  fill: { height: "100%" },
-  value: { fontSize: 15, color: colors.text },
-  state: { fontSize: 14, fontWeight: "600" },
-  muted: { fontSize: 13, color: colors.muted },
+  card: { backgroundColor: colors.primary, borderRadius: radius.lg, padding: 16, gap: 10 },
+  header: { flexDirection: "row", alignItems: "flex-start", gap: 10 },
+  headerText: { flex: 1, gap: 2 },
+  statusRow: { flexDirection: "row", alignItems: "center", gap: 5 },
+  overline: { fontSize: 12, fontWeight: "600" },
+  title: { fontSize: 20, fontWeight: "700", color: colors.onPrimary, letterSpacing: -0.2 },
+  close: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.primaryRaised,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  stats: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end" },
+  statRight: { alignItems: "flex-end" },
+  statLabel: { fontSize: 12, color: colors.onPrimaryMuted },
+  statValue: { fontSize: 22, fontWeight: "700", color: colors.onPrimary, fontVariant: ["tabular-nums"] },
+  footnote: { fontSize: 12, color: colors.onPrimaryMuted },
+  button: { marginTop: 4, minHeight: 46 },
 });

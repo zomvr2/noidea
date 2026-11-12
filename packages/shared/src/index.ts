@@ -350,3 +350,31 @@ export function toWithdrawal(r: WithdrawalRow): Withdrawal {
     finishedAt: r.finished_at,
   };
 }
+
+/** Columnas de public.quotas. */
+export const QUOTA_COLUMNS = "family_id, period_start, period_end, allocated_l, used_l, reserved_l";
+
+export interface QuotaRow {
+  family_id: number;
+  period_start: string;
+  period_end: string;
+  allocated_l: number | string;
+  used_l: number | string;
+  reserved_l: number | string;
+}
+
+/** Disponible = asignado − usado − reservado (nunca negativo). `used_l` suma volúmenes estimados. */
+export function toQuotaBalance(r: QuotaRow): QuotaBalance {
+  const allocatedL = Number(r.allocated_l);
+  const usedL = Number(r.used_l);
+  const reservedL = Number(r.reserved_l);
+  return {
+    familyId: r.family_id,
+    periodStart: r.period_start,
+    periodEnd: r.period_end,
+    allocatedL,
+    usedL,
+    reservedL,
+    availableL: Math.max(0, allocatedL - usedL - reservedL),
+  };
+}

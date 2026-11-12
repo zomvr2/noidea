@@ -1,5 +1,6 @@
 import {
   Camera,
+  type CameraRef,
   GeoJSONSource,
   Layer,
   Map as MapView,
@@ -7,31 +8,37 @@ import {
 } from "@maplibre/maplibre-react-native";
 import type { Tank } from "@noidea/shared";
 import type { FeatureCollection, Point } from "geojson";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { type NativeSyntheticEvent, StyleSheet } from "react-native";
 import { MAP_STYLE_URL } from "@/lib/config";
 import { LEVEL_COLORS, levelState } from "@/features/tanks/tank-status";
+import { colors } from "@/theme";
 
 /** Centro por defecto si aún no hay estanques ubicados (Antofagasta, Chile). Cambiar según la comunidad. */
 const DEFAULT_CENTER: [number, number] = [-70.4, -23.65];
 
 interface Props {
   tanks: Tank[];
+  now: number;
+  selectedId: number | null;
   onSelect: (tankId: number) => void;
+  /** Espacio ocupado por la UI superpuesta, para centrar bien la cámara. */
+  padding: { top: number; bottom: number };
 }
 
 /**
  * Mapa de estanques (MapLibre Native + estilo OpenFreeMap). Cada estanque es un círculo
  * coloreado por estado de nivel con una etiqueta "nombre · ≈ NN%".
  */
-export function TankMap({ tanks, onSelect }: Props) {
+export function TankMap({ tanks, now, selectedId, onSelect, padding }: Props) {
+  const camera = useRef<CameraRef>(null);
   const located = useMemo(() => tanks.filter((t) => t.location), [tanks]);
 
   const data = useMemo<FeatureCollection<Point>>(
     () => ({
       type: "FeatureCollection",
       features: located.map((t) => {
-        const state = levelState(t);
+        const state = levelState(t, now);
         const pct = t.level.percent === null || state === "offline" ? "?" : `≈${Math.round(t.level.percent)}%`;
         return {
           type: "Feature",
@@ -47,7 +54,7 @@ export function TankMap({ tanks, onSelect }: Props) {
         };
       }),
     }),
-    [located],
+    [located, now, selectedId],
   );
 
   // Vista inicial calculada una sola vez (el padre monta el mapa cuando ya cargaron los estanques).
@@ -66,13 +73,32 @@ export function TankMap({ tanks, onSelect }: Props) {
         number,
         number,
       ],
-      padding: { top: 80, right: 60, bottom: 220, left: 60 },
+      padding: { top: padding.top + 40, right: 60, bottom: padding.bottom + 40, left: 60 },
     };
   });
 
+  // Al seleccionar un estanque (desde el mapa o la fila inferior), centrarlo con animación.
+  useEffect(() => {
+    const loc = located.find((t) => t.id === selectedId)?.location;
+    if (!loc) return;
+    camera.current?.easeTo({
+      center: [loc.longitude, loc.latitude],
+      duration: 450,
+      padding: { top: padding.top, bottom: padding.bottom, left: 0, right: 0 },
+    });
+    // Solo al cambiar la selección; no seguir cada actualización de nivel.
+  }, [selectedId]);
+
   return (
-    <MapView style={StyleSheet.absoluteFill} mapStyle={MAP_STYLE_URL}>
-      <Camera initialViewState={initialViewState} />
+    <MapView
+      style={StyleSheet.absoluteFill}
+      mapStyle={MAP_STYLE_URL}
+      logo={false}
+      compassPosition={{ top: padding.top + 8, right: 16 }}
+      attributionPosition={{ bottom: padding.bottom + 8, left: 8 }}
+      tintColor={colors.primary}
+    >
+      <Camera ref={camera} initialViewState={initialViewState} />
       <GeoJSONSource
         id="tanks"
         data={data}
@@ -87,10 +113,10 @@ export function TankMap({ tanks, onSelect }: Props) {
           id="tanks-halo"
           source="tanks"
           paint={{
-            "circle-radius": 18,
+            "circle-radius": ["case", ["==", ["get", "selected"], 1], 24, 18],
             "circle-color": ["get", "color"],
-            "circle-opacity": 0.25,
-            "circle-stroke-width": 2,
+            "circle-opacity": 0.22,
+            "circle-stroke-width": ["case", ["==", ["get", "selected"], 1], 3, 2],
             "circle-stroke-color": ["get", "color"],
           }}
         />
@@ -114,11 +140,11 @@ export function TankMap({ tanks, onSelect }: Props) {
             "text-field": ["get", "label"],
             "text-font": ["Noto Sans Bold"], // fuente disponible en el estilo liberty de OpenFreeMap
             "text-size": 12,
-            "text-offset": [0, 1.8],
+            "text-offset": [0, 2.1],
             "text-anchor": "top",
             "text-allow-overlap": true,
           }}
-          paint={{ "text-color": "#14202B", "text-halo-color": "#ffffff", "text-halo-width": 1.5 }}
+          paint={{ "text-color": colors.text, "text-halo-color": "#ffffff", "text-halo-width": 1.5 }}
         />
       </GeoJSONSource>
     </MapView>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { commandSigningString, deviceTopic, normalizeTagUid, requestSigningString, sanitizeLcdText } from "./index";
+import { commandSigningString, deviceTopic, normalizeTagUid, requestSigningString, sanitizeLcdText, toQuotaBalance } from "./index";
 
 describe("commandSigningString", () => {
   it("es estable para cada orden (debe coincidir con el firmware)", () => {
@@ -24,5 +24,31 @@ describe("utilidades", () => {
 
   it("nombra el canal del dispositivo", () => {
     expect(deviceTopic("abc")).toBe("device:abc");
+  });
+});
+
+describe("toQuotaBalance", () => {
+  it("normaliza numeric como string y calcula el disponible", () => {
+    const q = toQuotaBalance({
+      family_id: 1,
+      period_start: "2026-11-01T00:00:00Z",
+      period_end: "2026-12-01T00:00:00Z",
+      allocated_l: "100.00",
+      used_l: "30.5",
+      reserved_l: 10,
+    });
+    expect(q).toMatchObject({ allocatedL: 100, usedL: 30.5, reservedL: 10, availableL: 59.5 });
+  });
+
+  it("nunca entrega un disponible negativo", () => {
+    const q = toQuotaBalance({
+      family_id: 1,
+      period_start: "2026-11-01T00:00:00Z",
+      period_end: "2026-12-01T00:00:00Z",
+      allocated_l: 20,
+      used_l: 25,
+      reserved_l: 0,
+    });
+    expect(q.availableL).toBe(0);
   });
 });
