@@ -1,0 +1,472 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Armado del dispensador NoIdea</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Manual de bloques: cada paso = número grande + recuadro de piezas + ilustración del montaje acumulado (lo nuevo resaltado). */
+:root {
+  --bg: #e4ebf1; --panel: #ffffff; --ink: #14202b; --muted: #566878; --line: #c7d3de;
+  --accent: #f0a500; --accent-soft: #fff3d1; --warn: #b4410b; --warn-soft: #fde9dc; --stage: #f6f9fb; --num: #0f2a44;
+  --f-display: "Barlow Condensed", "Arial Narrow", sans-serif;
+  --f-body: "Inter", system-ui, sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0e161e; --panel: #16212c; --ink: #e3eaf0; --muted: #98abbd; --line: #2a3b4b;
+  --accent: #f5b62e; --accent-soft: #3a2e10; --warn: #fb8f4f; --warn-soft: #3a2116; --stage: #1b2834; --num: #e3eaf0; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #0e161e; --panel: #16212c; --ink: #e3eaf0; --muted: #98abbd; --line: #2a3b4b;
+  --accent: #f5b62e; --accent-soft: #3a2e10; --warn: #fb8f4f; --warn-soft: #3a2116; --stage: #1b2834; --num: #e3eaf0; color-scheme: dark }
+
+body { background: var(--bg); color: var(--ink); font: 15px/1.55 var(--f-body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 24px 64px; }
+.wrap { max-width: 1080px; margin: 0 auto; display: grid; gap: 28px; }
+h1, h2 { font-family: var(--f-display); text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(2.4rem, 6vw, 3.6rem); font-weight: 800; line-height: 1; letter-spacing: .01em; }
+.eyebrow { font: 600 .78rem/1 var(--f-body); text-transform: uppercase; letter-spacing: .12em; color: var(--muted); }
+.lead { max-width: 65ch; margin: .6rem 0 0; color: var(--muted); }
+code, .mono { font-family: var(--f-mono); font-size: .9em; }
+.note { border: 1px solid var(--line); background: var(--panel); border-radius: 10px; padding: 14px 16px; display: grid; gap: 8px; }
+.note b { font-weight: 600; }
+.legend { display: flex; flex-wrap: wrap; gap: 10px 22px; align-items: center; font-size: .88rem; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 8px; }
+.legend svg { width: 72px; height: 24px; }
+nav.steps { display: flex; flex-wrap: wrap; gap: 6px; }
+nav.steps a { font: 800 1.05rem/1 var(--f-display); color: var(--ink); text-decoration: none; border: 1.5px solid var(--line); background: var(--panel);
+  min-width: 38px; height: 38px; display: inline-grid; place-items: center; border-radius: 8px; }
+nav.steps a:hover, nav.steps a:focus-visible { border-color: var(--accent); outline: none; }
+
+.step { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 20px; display: grid; gap: 16px; scroll-margin-top: 16px; }
+.step-head { display: flex; align-items: baseline; gap: 14px; }
+.num { font: 800 clamp(3rem, 8vw, 4.4rem)/.8 var(--f-display); color: var(--num); font-variant-numeric: tabular-nums; }
+.step-head h2 { font-size: clamp(1.5rem, 3.4vw, 2rem); font-weight: 600; }
+.body { display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 18px; align-items: start; }
+.parts { border: 2px solid var(--ink); border-radius: 10px; padding: 10px; display: grid; gap: 8px; background: var(--stage); }
+.parts .t { font: 600 .72rem/1 var(--f-body); text-transform: uppercase; letter-spacing: .12em; color: var(--muted); }
+.part { display: grid; grid-template-columns: 92px 1fr; gap: 8px; align-items: center; }
+.part svg { width: 92px; height: 54px; }
+.part .q { font: 800 1.25rem/1 var(--f-display); }
+.part .n { font-size: .8rem; color: var(--muted); line-height: 1.3; }
+.part .n b { color: var(--ink); font-weight: 600; display: block; font-size: .86rem; }
+figure { margin: 0; min-width: 0; }
+.stage { width: 100%; height: auto; display: block; background: var(--stage); border-radius: 10px; border: 1px solid var(--line); }
+.txt { display: grid; gap: 10px; min-width: 0; max-width: 72ch; }
+.txt p { margin: 0; }
+.txt ol, .txt ul { margin: 0; padding-left: 1.3rem; display: grid; gap: 4px; }
+.conn { width: 100%; border-collapse: collapse; font-size: .9rem; }
+.conn th { text-align: left; font: 600 .72rem/1 var(--f-body); text-transform: uppercase; letter-spacing: .1em; color: var(--muted); padding: 6px 8px; border-bottom: 1px solid var(--line); }
+.conn td { padding: 7px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.conn td:first-child { white-space: nowrap; }
+.sw { display: inline-block; width: 22px; height: 6px; border-radius: 3px; vertical-align: middle; margin-right: 8px; border: 1px solid #0004; }
+.tablewrap { overflow-x: auto; }
+.warn { background: var(--warn-soft); border-left: 4px solid var(--warn); padding: 10px 12px; border-radius: 6px; }
+.warn b { color: var(--warn); }
+.tip { background: var(--accent-soft); border-left: 4px solid var(--accent); padding: 10px 12px; border-radius: 6px; }
+.grid-inv { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; }
+.inv { border: 1px solid var(--line); border-radius: 10px; padding: 10px; display: grid; gap: 6px; background: var(--stage); }
+.inv svg { width: 100%; height: 84px; }
+.inv .n { font-size: .86rem; line-height: 1.35; }
+.inv .n b { display: block; font-weight: 600; }
+.inv .q { font: 800 1.1rem/1 var(--f-display); color: var(--muted); }
+.skip { color: var(--muted); font-size: .9rem; }
+.sl { fill: var(--ink); font: 600 13px var(--f-body); }
+.sl.m { fill: var(--muted); font-weight: 500; }
+.pl { font: 500 8.5px var(--f-mono); fill: #aebdcb; text-anchor: middle; }
+.pl.on { fill: #ffd24a; font-weight: 700; font-size: 9.5px; }
+@media (max-width: 760px) {
+  .body { grid-template-columns: 1fr; }
+  .parts { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+  .parts .t { grid-column: 1 / -1; }
+}
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">NoIdea · prototipo del dispensador</div>
+    <h1>Manual de armado</h1>
+    <p class="lead">Montaje del ESP32 solo con lo que hay en el kit, igual al diagrama de Wokwi actualizado: HC-SR04 a 5 V con un divisor de tres resistencias de 1,5 kΩ, servo con la batería portátil a través del Arduino UNO, sin condensador ni conversor I2C. Cada paso muestra las piezas que usa y el montaje hasta ese punto; lo nuevo va resaltado en amarillo.</p>
+  </header>
+
+  <div class="note">
+    <div><b>Son dibujos, no fotos.</b> La forma de tus módulos y el orden de sus pines pueden ser distintos. Guíate siempre por lo que está impreso junto a cada pin (por ejemplo <code>GND</code>, <code>VCC</code>, <code>S</code>).</div>
+    <div><b>Todo se arma desenchufado.</b> Ni el USB ni la batería portátil se conectan hasta los pasos 12 y 13.</div>
+    <div class="legend" id="legend"></div>
+  </div>
+
+  <nav class="steps" id="nav" aria-label="Pasos"></nav>
+  <main class="wrap" id="steps"></main>
+</div>
+
+<script>
+// ---------- Geometría de la escena (viewBox 1000 x 940) ----------
+const ROW = { tp: 598, tn: 614, a: 640, e: 696, f: 724, j: 780, bp: 802, bn: 818 };
+const cx = c => 52 + (c - 1) * 14;
+const H = (r, c) => [cx(c), ROW[r]];
+// ESP32 DevKit V1 de 30 pines, con el USB a la izquierda: fila de arriba = columna izquierda, fila de abajo = columna derecha.
+const TOP = ['VIN','GND','D13','D12','D14','D27','D26','D25','D33','D32','D35','D34','VN','VP','EN'];
+const BOT = ['3V3','GND','D15','D2','D4','RX2','TX2','D5','D18','D19','D21','RX0','TX0','D22','D23'];
+const T = i => [330 + 27 * i, 252], B = i => [330 + 27 * i, 338];
+const UP = [0, -1], DN = [0, 1], LF = [-1, 0], RT = [1, 0];
+const HC = { VCC: [818, 172], TRIG: [832, 172], ECHO: [846, 172], GND: [860, 172] };
+const LCD = { GND: [688, 430], VCC: [688, 444], SDA: [688, 458], SCL: [688, 472] };
+const WS = { S: [410, 162], P: [430, 162], M: [450, 162] };
+const RL = { GND: [105, 162], VCC: [130, 162], IN: [155, 162] };
+const SV = { SIG: [456, 440], V: [456, 455], G: [456, 470] };
+const COL = { red: '#d93a2b', black: '#26292d', yellow: '#f2c81b', lime: '#7fd34a', blue: '#2f6fe0', purple: '#8b4fd6',
+  cyan: '#22b8cf', magenta: '#d63ab4', green: '#1f9d55', orange: '#f08a1c', gray: '#8a949e' };
+
+// ---------- Piezas dibujadas ----------
+function breadboard(railHL) {
+  let s = `<rect x="30" y="580" width="912" height="256" rx="8" fill="#f2efe6" stroke="#d6d1c3"/>`;
+  s += `<rect x="30" y="704" width="912" height="12" fill="#e2ddcf"/>`;
+  const line = (y, c) => `<line x1="48" x2="928" y1="${y}" y2="${y}" stroke="${c}" stroke-width="2"/>`;
+  s += line(589, '#d93a2b') + line(623, '#2f6fe0') + line(793, '#d93a2b') + line(827, '#2f6fe0');
+  const holes = y => { let d = ''; for (let c = 1; c <= 63; c++) d += `M${cx(c) - 2.2} ${y - 2.2}h4.4v4.4h-4.4z`; return `<path d="${d}" fill="#58554d"/>`; };
+  [598, 614, 640, 654, 668, 682, 696, 724, 738, 752, 766, 780, 802, 818].forEach(y => s += holes(y));
+  for (let c = 5; c <= 60; c += 5) s += `<text x="${cx(c)}" y="633" font-size="7" fill="#8f8a7c" text-anchor="middle" font-family="JetBrains Mono">${c}</text>`;
+  ['a','b','c','d','e'].forEach((r, i) => s += `<text x="40" y="${643 + i * 14}" font-size="8" fill="#8f8a7c" text-anchor="middle" font-family="JetBrains Mono">${r}</text>`);
+  ['f','g','h','i','j'].forEach((r, i) => s += `<text x="40" y="${727 + i * 14}" font-size="8" fill="#8f8a7c" text-anchor="middle" font-family="JetBrains Mono">${r}</text>`);
+  const rl = (y, t, c) => `<text x="40" y="${y + 4}" font-size="12" font-weight="700" fill="${c}" text-anchor="middle">${t}</text>`;
+  s += rl(598, '+', '#d93a2b') + rl(614, '−', '#2f6fe0') + rl(802, '+', '#d93a2b') + rl(818, '−', '#2f6fe0');
+  if (railHL) {
+    s += `<rect x="44" y="590" width="890" height="32" rx="4" fill="none" stroke="#f0a500" stroke-width="3" stroke-dasharray="7 5"/>`;
+    s += `<rect x="44" y="794" width="890" height="32" rx="4" fill="none" stroke="#f0a500" stroke-width="3" stroke-dasharray="7 5"/>`;
+  }
+  return s;
+}
+function tape() {
+  return `<rect x="560" y="795" width="372" height="30" rx="3" fill="#f08a1c" opacity=".28"/>
+  <text x="922" y="814" font-size="12" font-weight="700" fill="#b4590b" text-anchor="end" font-family="Inter">BATERÍA</text>
+  <text x="922" y="611" font-size="12" font-weight="700" fill="#8f8a7c" text-anchor="end" font-family="Inter">USB 5 V</text>`;
+}
+function esp(hl = new Set()) {
+  let s = `<rect x="280" y="281" width="22" height="28" rx="2" fill="#b9c1c9" stroke="#7d868f"/>
+  <rect x="298" y="245" width="432" height="100" rx="6" fill="#1c2a38" stroke="#0d151d"/>
+  <rect x="560" y="276" width="130" height="40" rx="3" fill="#c7ccd1" stroke="#9aa1a8"/>
+  <text x="625" y="300" font-size="10" fill="#5b636b" text-anchor="middle" font-family="JetBrains Mono">ESP-WROOM-32</text>
+  <rect x="692" y="276" width="34" height="40" fill="#24384c"/>
+  <path d="M697 282h24v6h-20v6h20v6h-20v6h20v6h-24" fill="none" stroke="#c9a64a" stroke-width="1.6"/>
+  <rect x="318" y="282" width="12" height="9" rx="2" fill="#3b4b5b"/><rect x="318" y="299" width="12" height="9" rx="2" fill="#3b4b5b"/>
+  <text x="440" y="301" font-size="15" font-weight="600" fill="#8aa1b6" text-anchor="middle" font-family="Inter">ESP32 DevKit V1</text>`;
+  TOP.forEach((n, i) => { const [x, y] = T(i), on = hl.has('T' + i);
+    s += `<rect x="${x - 3.5}" y="${y - 3.5}" width="7" height="7" fill="${on ? '#ffd24a' : '#b8964a'}"/><text x="${x}" y="${y + 16}" class="pl${on ? ' on' : ''}">${n}</text>`; });
+  BOT.forEach((n, i) => { const [x, y] = B(i), on = hl.has('B' + i);
+    s += `<rect x="${x - 3.5}" y="${y - 3.5}" width="7" height="7" fill="${on ? '#ffd24a' : '#b8964a'}"/><text x="${x}" y="${y - 10}" class="pl${on ? ' on' : ''}">${n}</text>`; });
+  return s;
+}
+function legs(pts, y0, y1) { return pts.map(x => `<line x1="${x}" x2="${x}" y1="${y0}" y2="${y1}" stroke="#c9a64a" stroke-width="3"/>`).join(''); }
+function hcsr04() {
+  return `<rect x="740" y="70" width="200" height="90" rx="4" fill="#1f5fae" stroke="#16457f"/>
+  <circle cx="790" cy="112" r="34" fill="#c3c9cf" stroke="#8d959c"/><circle cx="790" cy="112" r="25" fill="#3a3d40"/>
+  <circle cx="890" cy="112" r="34" fill="#c3c9cf" stroke="#8d959c"/><circle cx="890" cy="112" r="25" fill="#3a3d40"/>
+  <rect x="830" y="78" width="20" height="9" rx="4" fill="#d9dde1"/>
+  <text x="840" y="152" font-size="8" fill="#dbe7f5" text-anchor="middle" font-family="JetBrains Mono">VCC Trig Echo Gnd</text>
+  ${legs([818, 832, 846, 860], 160, 172)}`;
+}
+function lcd() {
+  return `<rect x="700" y="400" width="180" height="86" rx="3" fill="#2a8a3f" stroke="#1d6a2f"/>
+  <rect x="730" y="410" width="142" height="66" rx="2" fill="#1b1e21"/>
+  <rect x="736" y="416" width="130" height="54" fill="#a8d468"/>
+  <text x="742" y="438" font-size="11" fill="#2b3b12" font-family="JetBrains Mono">NoIdea: prueba</text>
+  <text x="742" y="458" font-size="11" fill="#2b3b12" font-family="JetBrains Mono">d=1008mm</text>
+  <rect x="700" y="422" width="9" height="58" fill="#141414"/>
+  ${[430, 444, 458, 472].map(y => `<line x1="700" x2="688" y1="${y}" y2="${y}" stroke="#c9a64a" stroke-width="3"/>`).join('')}
+  <text x="712" y="433" font-size="7" fill="#dff3e3" font-family="JetBrains Mono">GND</text>
+  <text x="712" y="447" font-size="7" fill="#dff3e3" font-family="JetBrains Mono">VCC</text>
+  <text x="712" y="461" font-size="7" fill="#dff3e3" font-family="JetBrains Mono">SDA</text>
+  <text x="712" y="475" font-size="7" fill="#dff3e3" font-family="JetBrains Mono">SCL</text>`;
+}
+function water() {
+  let tr = ''; for (let i = 0; i < 5; i++) tr += `<rect x="${408 + i * 10}" y="${i % 2 ? 26 : 34}" width="4" height="${i % 2 ? 92 : 92}" fill="#d8d8d8"/>`;
+  return `<rect x="400" y="20" width="60" height="130" rx="3" fill="#c3312f" stroke="#8e2220"/>${tr}
+  <text x="410" y="143" font-size="9" fill="#fff" text-anchor="middle" font-weight="700">S</text>
+  <text x="430" y="143" font-size="9" fill="#fff" text-anchor="middle" font-weight="700">+</text>
+  <text x="450" y="143" font-size="9" fill="#fff" text-anchor="middle" font-weight="700">−</text>
+  ${legs([410, 430, 450], 150, 162)}`;
+}
+function relay() {
+  return `<rect x="60" y="60" width="140" height="90" rx="3" fill="#1d4fa3" stroke="#143a78"/>
+  <rect x="74" y="68" width="76" height="58" rx="2" fill="#2f6fd8" stroke="#1d4fa3"/>
+  <text x="112" y="101" font-size="8" fill="#e6efff" text-anchor="middle" font-family="JetBrains Mono">RELÉ 5V</text>
+  <rect x="158" y="66" width="36" height="58" rx="2" fill="#2c9a5a"/>
+  <circle cx="176" cy="78" r="5" fill="#9bd4b0"/><circle cx="176" cy="95" r="5" fill="#9bd4b0"/><circle cx="176" cy="112" r="5" fill="#9bd4b0"/>
+  <circle cx="80" cy="138" r="3" fill="#ff5a4f"/>
+  <text x="105" y="145" font-size="7.5" fill="#e6efff" text-anchor="middle" font-family="JetBrains Mono">GND</text>
+  <text x="130" y="145" font-size="7.5" fill="#e6efff" text-anchor="middle" font-family="JetBrains Mono">VCC</text>
+  <text x="155" y="145" font-size="7.5" fill="#e6efff" text-anchor="middle" font-family="JetBrains Mono">IN</text>
+  ${legs([105, 130, 155], 150, 162)}`;
+}
+function servo() {
+  return `<rect x="290" y="440" width="130" height="24" rx="4" fill="#3f7ee0"/>
+  <rect x="300" y="424" width="110" height="56" rx="5" fill="#2b66c9" stroke="#1d4f9f"/>
+  <circle cx="330" cy="452" r="12" fill="#f1f1f1"/><path d="M330 446 L372 449 L372 455 L330 458 Z" fill="#f1f1f1"/>
+  <circle cx="330" cy="452" r="3" fill="#888"/>
+  <text x="392" y="476" font-size="9" fill="#d7e4fb" text-anchor="middle" font-weight="700">SG90</text>
+  <path d="M410 447 C425 447 428 440 440 440" stroke="${COL.orange}" stroke-width="3" fill="none"/>
+  <path d="M410 452 C425 452 428 455 440 455" stroke="${COL.red}" stroke-width="3" fill="none"/>
+  <path d="M410 457 C425 457 428 470 440 470" stroke="#6b3a1e" stroke-width="3" fill="none"/>
+  <rect x="440" y="432" width="16" height="46" rx="2" fill="#151515"/>
+  ${[440, 455, 470].map(y => `<rect x="450" y="${y - 3}" width="6" height="6" fill="#444"/>`).join('')}`;
+}
+function powerbank(plugged) {
+  const px = plugged ? 632 : 596;
+  return `<rect x="642" y="858" width="290" height="62" rx="12" fill="#353b43" stroke="#20252b"/>
+  <text x="787" y="895" font-size="14" fill="#cfd6dd" text-anchor="middle" font-family="Inter" font-weight="600">Batería portátil</text>
+  ${[0, 1, 2, 3].map(i => `<circle cx="${880 + i * 10}" cy="872" r="2.6" fill="${plugged ? '#4ade80' : '#59616a'}"/>`).join('')}
+  <rect x="636" y="879" width="8" height="20" fill="#9aa3ad"/>
+  <path d="M572 887 C ${px - 10} 887, ${px - 10} 889, ${px} 889" stroke="#7b838c" stroke-width="7" fill="none" stroke-linecap="round"/>
+  <rect x="${px - 2}" y="881" width="22" height="16" rx="2" fill="#c3cad1" stroke="#8d959c"/>
+  ${plugged ? '' : `<text x="${px + 10}" y="914" class="sl m" text-anchor="middle" font-size="11">sin conectar</text>`}`;
+}
+// Arduino UNO usado solo como adaptador: recibe la batería por USB y entrega 5 V por su pin 5V.
+function uno() {
+  return `<rect x="360" y="850" width="200" height="78" rx="4" fill="#1d7f93" stroke="#145d6c"/>
+  <rect x="400" y="851" width="74" height="10" fill="#151515"/>
+  ${[402, 416, 430, 444, 458].map(x => `<rect x="${x + 1}" y="853" width="6" height="6" fill="#3a3a3a"/>`).join('')}
+  <rect x="426.5" y="852.5" width="7" height="7" fill="#ffd24a"/><rect x="440.5" y="852.5" width="7" height="7" fill="#ffd24a"/>
+  <text x="430" y="872" font-size="8" fill="#e6f6f9" text-anchor="middle" font-family="JetBrains Mono">5V</text>
+  <text x="444" y="880" font-size="8" fill="#e6f6f9" text-anchor="middle" font-family="JetBrains Mono">GND</text>
+  <text x="470" y="906" font-size="12" fill="#e6f6f9" text-anchor="middle" font-family="Inter" font-weight="600">Arduino UNO</text>
+  <rect x="548" y="876" width="26" height="22" rx="2" fill="#b9c1c9" stroke="#7d868f"/>`;
+}
+function resistor(x1, y1, x2, y2, len = 30) {
+  const a = Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI, mx = (x1 + x2) / 2, my = (y1 + y2) / 2, b = len / 2;
+  const bands = [['#7a4a1f', -b + 5], ['#2f9a46', -b + 10], ['#d93a2b', -b + 15], ['#c9a64a', b - 6]];
+  return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#9aa3ab" stroke-width="2"/>
+  <g transform="translate(${mx} ${my}) rotate(${a})"><rect x="${-b}" y="-5" width="${len}" height="10" rx="4" fill="#e3cfa1" stroke="#b59d6b"/>
+  ${bands.map(([c, x]) => `<rect x="${x}" y="-5" width="3" height="10" fill="${c}"/>`).join('')}</g>
+  <circle cx="${x1}" cy="${y1}" r="2.6" fill="#9aa3ab"/><circle cx="${x2}" cy="${y2}" r="2.6" fill="#9aa3ab"/>`;
+}
+function divider() {
+  return resistor(cx(20), ROW.a + 28, cx(24), ROW.a + 28) + resistor(cx(24), ROW.a + 42, cx(28), ROW.a + 42) + resistor(cx(28), ROW.a, cx(28), ROW.tn, 18)
+    + `<text x="${cx(24)}" y="${ROW.e + 3}" font-size="9" fill="#7a6a45" text-anchor="middle" font-family="JetBrains Mono">R1 R2 R3 = 1,5 kΩ</text>`;
+}
+function laptopCable() {
+  return `<path d="M282 295 C 200 295, 120 300, 0 300" stroke="#7b838c" stroke-width="7" fill="none" stroke-linecap="round"/>
+  <text x="10" y="290" class="sl">USB → laptop</text>`;
+}
+
+const COMP = {
+  bb: { box: [25, 575, 922, 266], at: 1, draw: s => breadboard(s === 10) + (s >= 1 ? tape() : '') },
+  esp: { box: [276, 240, 460, 112], at: 2, draw: (s, hl) => esp(hl) },
+  hc: { box: [735, 65, 210, 112], at: 4, draw: hcsr04 },
+  res: { box: [300, 606, 150, 100], at: 4, draw: divider },
+  lcd: { box: [682, 395, 203, 95], at: 5, draw: lcd },
+  ws: { box: [395, 15, 70, 152], at: 6, draw: water },
+  sv: { box: [285, 418, 177, 70], at: 7, draw: servo },
+  rl: { box: [55, 55, 150, 112], at: 9, draw: relay },
+  pb: { box: [590, 852, 348, 76], at: 11, draw: s => powerbank(s >= 13) },
+  uno: { box: [355, 845, 224, 88], at: 11, draw: uno },
+  usb: { box: [0, 280, 300, 30], at: 12, draw: laptopCable },
+};
+
+// ---------- Cables ----------
+// a/b: puntos; da/db: hacia dónde sale el cable; t: tipo de puntas (H = hembra, M = macho), en orden a→b.
+const W = [
+  { s: 3, a: T(0), da: [-1, -.6], b: H('tp', 14), db: UP, c: COL.red, t: 'HM', tag: 'VIN → + arriba', tt: .75, hl: ['T0'] },
+  { s: 3, a: T(1), da: [-1, -.6], b: H('tn', 15), db: UP, c: COL.black, t: 'HM', tag: 'GND → − arriba', tt: .3, hl: ['T1'] },
+  { s: 4, a: HC.VCC, da: DN, b: H('tp', 58), db: UP, c: COL.red, t: 'HM', tag: 'VCC → + arriba', tt: .35, off: [-10, -75] },
+  { s: 4, a: B(14), da: DN, b: HC.TRIG, db: DN, c: COL.yellow, t: 'HH', tag: 'D23 → Trig', hl: ['B14'] },
+  { s: 4, a: HC.ECHO, da: DN, b: H('a', 20), db: UP, c: COL.lime, t: 'HM', tag: 'Echo → col. 20', tt: .6 },
+  { s: 4, a: B(9), da: DN, b: H('a', 24), db: UP, c: COL.lime, t: 'HM', tag: 'D19 → col. 24', tt: .45, off: [40, 0], hl: ['B9'] },
+  { s: 4, a: HC.GND, da: DN, b: H('tn', 63), db: UP, c: COL.black, t: 'HM', tag: 'Gnd → −' },
+  { s: 5, a: LCD.GND, da: LF, b: H('tn', 45), db: UP, c: COL.black, t: 'HM', tag: 'GND → −', tt: .85, off: [-40, 0] },
+  { s: 5, a: LCD.VCC, da: LF, b: H('tp', 47), db: UP, c: COL.red, t: 'HM', tag: 'VCC → +', tt: .85, off: [50, 0] },
+  { s: 5, a: B(10), da: DN, b: LCD.SDA, db: LF, c: COL.blue, t: 'HH', tag: 'D21 → SDA', tt: .25, off: [-30, 0], hl: ['B10'] },
+  { s: 5, a: B(13), da: DN, b: LCD.SCL, db: LF, c: COL.purple, t: 'HH', tag: 'D22 → SCL', tt: .25, off: [30, 0], hl: ['B13'] },
+  { s: 6, a: WS.S, da: DN, b: T(11), db: UP, c: COL.cyan, t: 'HH', tag: 'S → D34', tt: .8, hl: ['T11'] },
+  { s: 6, a: WS.P, da: DN, b: T(7), db: UP, c: COL.magenta, t: 'HH', tag: '+ → D25', tt: .3, off: [0, 0], hl: ['T7'] },
+  { s: 6, a: WS.M, da: [-1, .3], b: H('tn', 12), db: UP, c: COL.black, t: 'HM', tag: '− → −' },
+  { s: 7, a: SV.SIG, da: RT, b: B(8), db: DN, c: COL.green, t: 'MH', tag: 'naranja → D18', hl: ['B8'] },
+  { s: 7, a: SV.V, da: RT, b: H('bp', 30), db: UP, c: COL.orange, t: 'MM', tag: 'rojo → + abajo', k: .5, off: [-62, 0] },
+  { s: 7, a: SV.G, da: RT, b: H('bn', 32), db: UP, c: COL.black, t: 'MM', tag: 'marrón → − abajo', k: .5, off: [70, 20] },
+  { s: 8, a: H('tn', 2), da: [-.6, 1], b: H('bn', 2), db: [-.6, -1], c: COL.black, t: 'MM', tag: '− arriba ↔ − abajo', k: .35, off: [80, 0] },
+  { s: 9, a: RL.IN, da: DN, b: T(6), db: UP, c: COL.gray, t: 'HH', tag: 'IN → D26', hl: ['T6'], k: .7 },
+  { s: 9, a: RL.VCC, da: DN, b: H('tp', 8), db: UP, c: COL.red, t: 'HM', tag: 'VCC → +', tt: .7, off: [40, 0] },
+  { s: 9, a: RL.GND, da: DN, b: H('tn', 6), db: UP, c: COL.black, t: 'HM', tag: 'GND → −' },
+  { s: 11, a: [430, 856], da: UP, b: H('bp', 28), db: DN, c: COL.orange, t: 'MM', tag: 'UNO 5V → + abajo', k: .4, off: [-95, 0] },
+  { s: 11, a: [444, 856], da: UP, b: H('bn', 29), db: DN, c: COL.black, t: 'MM', tag: 'UNO GND → − abajo', k: .4, off: [100, 8] },
+];
+
+function ctrl(w) {
+  const [x1, y1] = w.a, [x2, y2] = w.b, d = Math.hypot(x2 - x1, y2 - y1);
+  const k = Math.max(36, Math.min(240, d * .45)) * (w.k || 1);
+  return [[x1, y1], [x1 + w.da[0] * k, y1 + w.da[1] * k], [x2 + w.db[0] * k, y2 + w.db[1] * k], [x2, y2]];
+}
+function bez(p, t) { const u = 1 - t; return [0, 1].map(i => u*u*u*p[0][i] + 3*u*u*t*p[1][i] + 3*u*t*t*p[2][i] + t*t*t*p[3][i]); }
+function end(pt, type, dir) {
+  const [x, y] = pt;
+  if (type === 'H') return `<rect x="${x - 5}" y="${y - 5}" width="10" height="10" rx="1.5" fill="#111" stroke="#000"/>`;
+  if (type === 'M') return `<circle cx="${x}" cy="${y}" r="3.4" fill="#d5dade" stroke="#6b7278"/>`;
+  return '';
+}
+function wire(w, state) {
+  const p = ctrl(w), d = `M${p[0]} C${p[1]} ${p[2]} ${p[3]}`;
+  const op = state === 'old' ? .28 : 1;
+  let s = `<g opacity="${op}">`;
+  if (state === 'new') s += `<path d="${d}" stroke="#f0a500" stroke-width="13" fill="none" stroke-linecap="round" opacity=".45"/>`;
+  s += `<path d="${d}" stroke="#0007" stroke-width="7" fill="none" stroke-linecap="round"/>`;
+  s += `<path d="${d}" stroke="${w.c}" stroke-width="5" fill="none" stroke-linecap="round"/>`;
+  s += end(w.a, w.t[0]) + end(w.b, w.t[1]) + '</g>';
+  return s;
+}
+function tag(w, i) {
+  const p = bez(ctrl(w), w.tt || .5), o = w.off || [0, 0], x = p[0] + o[0], y = p[1] + o[1], txt = w.tag, wd = txt.length * 6.4 + 14;
+  return `<g><rect x="${x - wd / 2}" y="${y - 11}" width="${wd}" height="20" rx="10" fill="#fffdf6" stroke="#14202b" stroke-width="1.2"/>
+  <text x="${x}" y="${y + 3.5}" font-size="11" font-weight="600" text-anchor="middle" fill="#14202b" font-family="Inter">${txt}</text></g>`;
+}
+
+function scene(step) {
+  const hl = new Set(W.filter(w => w.s === step).flatMap(w => w.hl || []));
+  if (step === 2) ['T0','T1','T6','T7','T11','B8','B9','B10','B13','B14'].forEach(x => hl.add(x));
+  let s = '';
+  for (const [id, c] of Object.entries(COMP)) if (c.at <= step) {
+    s += c.draw(step, hl);
+    if (c.at === step && id !== 'bb') { const [x, y, w, h] = c.box; s += `<rect x="${x - 4}" y="${y - 4}" width="${w + 8}" height="${h + 8}" rx="8" fill="none" stroke="#f0a500" stroke-width="2.5" stroke-dasharray="8 6"/>`; }
+  }
+  W.filter(w => w.s < step).forEach(w => s += wire(w, 'old'));
+  const cur = W.filter(w => w.s === step);
+  cur.forEach(w => s += wire(w, 'new'));
+  cur.forEach((w, i) => s += tag(w, i));
+  return `<svg class="stage" viewBox="0 0 1000 940" role="img" aria-label="Montaje en el paso ${step}">${s}</svg>`;
+}
+
+// ---------- Iconos de piezas ----------
+function compIcon(id) {
+  const c = COMP[id], [x, y, w, h] = c.box;
+  return `<svg viewBox="${x - 6} ${y - 6} ${w + 12} ${h + 12}" aria-hidden="true">${id === 'bb' ? breadboard(false) : id === 'pb' ? powerbank(true) : c.draw(99, new Set())}</svg>`;
+}
+function wireIcon(type, color = '#d93a2b') {
+  const e = (x, t) => t === 'H' ? `<rect x="${x - 8}" y="13" width="16" height="14" rx="2" fill="#111"/>` : `<rect x="${x - 7}" y="17" width="14" height="6" fill="#d5dade" stroke="#6b7278"/>`;
+  return `<svg viewBox="0 0 120 40" aria-hidden="true"><path d="M18 20 C 45 2, 75 38, 102 20" stroke="${color}" stroke-width="5" fill="none"/>${e(14, type[0])}${e(106, type[1])}</svg>`;
+}
+const ICON = {
+  tape: `<svg viewBox="0 0 120 50" aria-hidden="true"><rect x="8" y="16" width="104" height="18" rx="2" fill="#f08a1c" opacity=".55"/><text x="60" y="29" font-size="10" font-weight="700" fill="#7a3a06" text-anchor="middle" font-family="Inter">BATERÍA</text></svg>`,
+  usbcut: `<svg viewBox="0 0 140 50" aria-hidden="true"><rect x="4" y="17" width="22" height="16" rx="2" fill="#c3cad1" stroke="#8d959c"/><path d="M26 25 H92" stroke="#7b838c" stroke-width="7"/><path d="M92 23 C 108 23, 112 12, 128 12" stroke="#d93a2b" stroke-width="3.5" fill="none"/><path d="M92 27 C 108 27, 112 38, 128 38" stroke="#26292d" stroke-width="3.5" fill="none"/><path d="M128 12h8M128 38h8" stroke="#c98b3a" stroke-width="2.5"/></svg>`,
+  usb: `<svg viewBox="0 0 140 50" aria-hidden="true"><rect x="4" y="17" width="22" height="16" rx="2" fill="#c3cad1" stroke="#8d959c"/><path d="M26 25 C 60 25, 80 25, 112 25" stroke="#7b838c" stroke-width="7"/><rect x="112" y="19" width="14" height="12" rx="2" fill="#c3cad1" stroke="#8d959c"/></svg>`,
+  laptop: `<svg viewBox="0 0 120 70" aria-hidden="true"><rect x="22" y="8" width="76" height="46" rx="3" fill="#3b4652"/><rect x="27" y="13" width="66" height="36" fill="#6fa8dc"/><path d="M10 56 H110 L104 64 H16 Z" fill="#7c8894"/></svg>`,
+  res: `<svg viewBox="0 0 120 40" aria-hidden="true"><line x1="6" y1="20" x2="114" y2="20" stroke="#9aa3ab" stroke-width="3"/><rect x="34" y="11" width="52" height="18" rx="7" fill="#e3cfa1" stroke="#b59d6b"/><rect x="42" y="11" width="5" height="18" fill="#7a4a1f"/><rect x="52" y="11" width="5" height="18" fill="#2f9a46"/><rect x="62" y="11" width="5" height="18" fill="#d93a2b"/><rect x="76" y="11" width="5" height="18" fill="#c9a64a"/></svg>`,
+  meter: `<svg viewBox="0 0 120 70" aria-hidden="true"><rect x="38" y="4" width="44" height="62" rx="6" fill="#f2c81b" stroke="#a08310"/><rect x="45" y="11" width="30" height="14" fill="#c8d8b0"/><circle cx="60" cy="44" r="11" fill="#333"/><path d="M60 44 l6 -7" stroke="#eee" stroke-width="2"/></svg>`,
+};
+
+// ---------- Pasos ----------
+const sw = c => `<span class="sw" style="background:${c}"></span>`;
+const table = rows => `<div class="tablewrap"><table class="conn"><thead><tr><th>Cable</th><th>Desde</th><th>Hasta</th></tr></thead><tbody>${rows.map(r => `<tr><td>${sw(r[0])}${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td></tr>`).join('')}</tbody></table></div>`;
+const P = (icon, q, name, sub = '') => ({ icon, q, name, sub });
+
+const STEPS = [
+  { n: 0, title: 'Las piezas', inv: true },
+  { n: 1, title: 'Prepara la protoboard',
+    parts: [P(compIcon('bb'), '1×', 'Protoboard'), P(ICON.tape, '1×', 'Cinta adhesiva', 'para marcar el riel de abajo')],
+    html: `<ol>
+      <li>Pon la protoboard con los números de columna arriba. Los dos rieles de arriba (<b>+</b> y <b>−</b>) llevarán los <b>5 V del USB</b>. Los dos de abajo llevarán los <b>5 V de la batería portátil</b>, solo para el servo.</li>
+      <li>Pega cinta sobre los rieles de abajo y escribe <b>BATERÍA</b>. Así no los confundes.</li>
+      <li>Mira las líneas roja y azul de los rieles. Si se cortan a la mitad, cada riel está partido en dos: pon un cable macho-macho que cruce el corte en <b>los cuatro rieles</b> (+ con +, − con −, del mismo lado).</li></ol>
+      <div class="warn"><b>Si saltas este puente, la mitad del montaje queda sin corriente.</b> Es fácil de pasar por alto: la LCD puede encender y el sensor ultrasónico no, solo porque quedaron en mitades distintas.</div>` },
+  { n: 2, title: 'Ubica el ESP32',
+    parts: [P(compIcon('esp'), '1×', 'ESP32 DevKit')],
+    html: `<p>El ESP32 queda <b>fuera de la protoboard</b>, al lado, con el conector USB hacia la izquierda. Es tan ancho que, si lo pinchas en la protoboard, tapa todos los agujeros libres y no podrías conectar nada junto a sus pines.</p>
+      <p>Los pines resaltados son los que vas a usar: <span class="mono">VIN, GND, D26, D25, D34</span> en una fila y <span class="mono">D18, D19, D21, D22, D23</span> en la otra. En esta placa el pin de 5 V se llama <b>VIN</b>: con el USB conectado entrega los 5 V del laptop.</p>
+      <div class="tip"><b>Busca cada pin por su nombre impreso, no por su posición.</b> El dibujo es la placa DevKit V1 de 30 pines (15 por lado), vista desde arriba con el USB a la izquierda.</div>` },
+  { n: 3, title: 'Lleva los 5 V del USB a los rieles de arriba',
+    parts: [P(wireIcon('HM', COL.red), '2×', 'Cable hembra-macho', 'uno rojo y uno negro')],
+    html: table([[COL.red, 'Rojo', 'ESP32 <span class="mono">VIN</span>', 'Riel <b>+</b> de arriba'], [COL.black, 'Negro', 'ESP32 <span class="mono">GND</span>', 'Riel <b>−</b> de arriba']]) +
+      `<p>La punta hembra va en el pin del ESP32; la macho, en el agujero del riel. Cualquier agujero del riel sirve, siempre que hayas puenteado el corte del paso 1.</p>` },
+  { n: 4, title: 'Conecta el sensor ultrasónico',
+    parts: [P(compIcon('hc'), '1×', 'Sensor ultrasonido', 'HC-SR04'), P(ICON.res, '3×', 'Resistencia 1,5 kΩ', 'marrón, verde, rojo'), P(wireIcon('HH', COL.yellow), '1×', 'Cable hembra-hembra'), P(wireIcon('HM', COL.red), '4×', 'Cable hembra-macho')],
+    html: `<p><b>Primero las tres resistencias</b>, en la parte central de arriba de la protoboard (filas a–e). No tienen polaridad: da igual hacia qué lado las pongas.</p>
+      <ul><li><b>R1:</b> de la columna 20 a la columna 24.</li>
+      <li><b>R2:</b> de la columna 24 a la columna 28.</li>
+      <li><b>R3:</b> de la columna 28 al riel <b>−</b> de arriba.</li></ul>` +
+      table([[COL.red, 'Rojo', 'HC-SR04 <span class="mono">VCC</span>', 'Riel <b>+</b> de arriba (5 V)'], [COL.yellow, 'Amarillo', '<span class="mono">Trig</span>', 'ESP32 <span class="mono">D23</span>'], [COL.lime, 'Verde claro', '<span class="mono">Echo</span>', 'Columna 20 (entrada de R1)'], [COL.lime, 'Verde claro', 'ESP32 <span class="mono">D19</span>', 'Columna 24 (entre R1 y R2)'], [COL.black, 'Negro', '<span class="mono">Gnd</span>', 'Riel <b>−</b> de arriba']]) +
+      `<p>Así el Echo pasa por R1 antes de llegar a <span class="mono">D19</span>, y R2 + R3 llevan <span class="mono">D19</span> a GND. A <span class="mono">D19</span> llegan 3,3 V en vez de 5 V.</p>
+      <div class="warn"><b>El cable del Echo nunca va directo a D19.</b> Con el sensor a 5 V, eso daña el pin. Con el sensor a 5 V y este divisor sirve cualquier HC-SR04, incluso los que no funcionan a 3,3 V.</div>` },
+  { n: 5, title: 'Conecta la pantalla LCD',
+    parts: [P(compIcon('lcd'), '1×', 'Pantalla LCD + driver I2C', 'el driver va soldado atrás'), P(wireIcon('HH', COL.blue), '2×', 'Cable hembra-hembra'), P(wireIcon('HM', COL.red), '2×', 'Cable hembra-macho')],
+    html: table([[COL.black, 'Negro', 'LCD <span class="mono">GND</span>', 'Riel <b>−</b> de arriba'], [COL.red, 'Rojo', 'LCD <span class="mono">VCC</span>', 'Riel <b>+</b> de arriba (5 V)'], [COL.blue, 'Azul', 'LCD <span class="mono">SDA</span>', 'ESP32 <span class="mono">D21</span>'], [COL.purple, 'Morado', 'LCD <span class="mono">SCL</span>', 'ESP32 <span class="mono">D22</span>']]) +
+      `<div class="tip">Si el driver (la plaquita con 4 pines) viene suelto, hay que soldarlo a los 16 pines de la pantalla antes de seguir.</div>` },
+  { n: 6, title: 'Conecta el sensor de nivel de agua',
+    parts: [P(compIcon('ws'), '1×', 'Sensor de nivel de agua'), P(wireIcon('HH', COL.cyan), '2×', 'Cable hembra-hembra'), P(wireIcon('HM', COL.black), '1×', 'Cable hembra-macho')],
+    html: table([[COL.cyan, 'Cian', 'Sensor <span class="mono">S</span>', 'ESP32 <span class="mono">D34</span>'], [COL.magenta, 'Magenta', 'Sensor <span class="mono">+</span>', 'ESP32 <span class="mono">D25</span>'], [COL.black, 'Negro', 'Sensor <span class="mono">−</span>', 'Riel <b>−</b> de arriba']]) +
+      `<div class="warn"><b>El + va al pin D25, no al riel.</b> El firmware enciende el sensor solo durante cada lectura para que no se corroa.</div>` },
+  { n: 7, title: 'Conecta el servo',
+    parts: [P(compIcon('sv'), '1×', 'Servomotor', 'SG90 o similar'), P(wireIcon('MH', COL.green), '1×', 'Cable hembra-macho'), P(wireIcon('MM', COL.orange), '2×', 'Cable macho-macho')],
+    html: table([[COL.green, 'Verde', 'Servo, cable <b>naranja</b> (señal)', 'ESP32 <span class="mono">D18</span>'], [COL.orange, 'Naranja', 'Servo, cable <b>rojo</b>', 'Riel <b>+</b> de abajo (BATERÍA)'], [COL.black, 'Negro', 'Servo, cable <b>marrón</b>', 'Riel <b>−</b> de abajo']]) +
+      `<p>El conector del servo es hembra: mete la punta macho de cada cable en su agujero. En el cable de señal, la punta hembra va al pin D18 del ESP32.</p>
+       <div class="warn"><b>El rojo del servo va al riel de abajo, nunca al de arriba.</b> El servo consume demasiado para el USB del laptop.</div>` },
+  { n: 8, title: 'Une las dos tierras',
+    parts: [P(wireIcon('MM', COL.black), '1×', 'Cable macho-macho', 'negro')],
+    html: table([[COL.black, 'Negro', 'Riel <b>−</b> de arriba', 'Riel <b>−</b> de abajo']]) +
+      `<p>Sin este cable el servo no entiende la señal del ESP32: las dos fuentes necesitan la misma referencia de 0 V.</p>
+       <div class="warn"><b>Solo se unen los −.</b> Nunca pongas un cable entre el + de arriba y el + de abajo.</div>` },
+  { n: 9, title: 'Conecta el relé (opcional)',
+    parts: [P(compIcon('rl'), '1×', 'Relé 1 canal', 'reservado'), P(wireIcon('HH', COL.gray), '1×', 'Cable hembra-hembra'), P(wireIcon('HM', COL.red), '2×', 'Cable hembra-macho')],
+    html: table([[COL.gray, 'Gris', 'Relé <span class="mono">IN</span> (o <span class="mono">S</span>)', 'ESP32 <span class="mono">D26</span>'], [COL.red, 'Rojo', 'Relé <span class="mono">VCC</span> (o <span class="mono">+</span>)', 'Riel <b>+</b> de arriba'], [COL.black, 'Negro', 'Relé <span class="mono">GND</span> (o <span class="mono">−</span>)', 'Riel <b>−</b> de arriba']]) +
+      `<p>El relé está reservado para una futura electroválvula: puedes saltarte este paso. Si lo conectas, <b>no pongas nada en los tornillos</b> verdes. El orden de los pines cambia según el módulo; léelo en la placa.</p>` },
+  { n: 10, title: 'Revisa antes de enchufar',
+    parts: [P(ICON.meter, '1×', 'Multímetro', 'si tienes; si no, revisa a la vista')],
+    html: `<p>Con todo desenchufado, mide en continuidad (el modo que pita) entre los rieles marcados:</p>
+      <ul><li><b>+ de arriba con + de abajo:</b> <b>no</b> debe pitar.</li>
+      <li><b>Cualquier + con cualquier −:</b> <b>no</b> debe pitar.</li>
+      <li><b>− de arriba con − de abajo:</b> <b>sí</b> debe pitar (cable del paso 8).</li></ul>
+      <p>Sin multímetro, revisa a la vista que ningún cable vaya de un riel + a otro riel +, que el Echo pase por R1 (columna 20) antes de llegar a <span class="mono">D19</span> y que el rojo del servo esté en el riel BATERÍA.</p>` },
+  { n: 11, title: 'Lleva la batería al riel del servo con el Arduino UNO',
+    parts: [P(compIcon('uno'), '1×', 'Arduino UNO', 'solo como adaptador, sin programa'), P(ICON.usb, '1×', 'Cable USB del Arduino UNO', 'sin cortar'), P(wireIcon('MM', COL.orange), '2×', 'Cable macho-macho'), P(compIcon('pb'), '1×', 'Batería portátil', 'todavía sin conectar')],
+    html: `<p>El UNO recibe los 5 V de la batería portátil por su USB y los entrega por su pin <span class="mono">5V</span>. No hace falta cargarle ningún programa.</p>` +
+      table([[COL.orange, 'Naranja', 'UNO, pin <span class="mono">5V</span> (zona POWER)', 'Riel <b>+</b> de abajo (BATERÍA)'], [COL.black, 'Negro', 'UNO, pin <span class="mono">GND</span> (al lado del 5V)', 'Riel <b>−</b> de abajo']]) +
+      `<p>Conecta el cable USB al UNO, pero <b>todavía no</b> a la batería portátil.</p>
+      <div class="warn"><b>Usa el pin 5V, no VIN ni 3.3V.</b> Y el 5V del UNO va solo al riel BATERÍA, nunca al riel donde está el <span class="mono">VIN</span> del ESP32: serían dos fuentes juntas. No uses la batería de 9 V.</div>` },
+  { n: 12, title: 'Primer encendido, solo con el laptop',
+    parts: [P(ICON.usb, '1×', 'Cable USB del ESP32'), P(ICON.laptop, '1×', 'Laptop', 'con Arduino IDE 2')],
+    html: `<ol>
+      <li>La batería portátil sigue <b>desconectada</b>. Conecta el ESP32 al laptop.</li>
+      <li>Copia <span class="mono">firmware/wokwi/sketch.ino</span> en una carpeta <span class="mono">prueba_hardware/prueba_hardware.ino</span>, súbelo con la placa <b>ESP32 Dev Module</b> y abre el Monitor Serie a <b>115200</b>.</li>
+      <li>Escribe <span class="mono">level</span>. Debe aparecer algo como <span class="mono">d=350 mm  respaldo=… (SECO)</span>. Pon la mano delante del sensor: la distancia tiene que cambiar.</li>
+      <li>Moja la punta del sensor de nivel (con agua de la llave, no de consumo): debe pasar de <span class="mono">SECO</span> a <span class="mono">mojado</span>.</li></ol>
+      <div class="tip"><b>Si algo falla:</b> <span class="mono">d=sin eco</span> o valores locos → revisa que VCC del sensor esté en el riel + de arriba, Trig en <span class="mono">D23</span>, Echo en la columna 20 y <span class="mono">D19</span> en la columna 24. LCD encendida pero sin letras → gira con un destornillador el tornillito azul de atrás (contraste). LCD sin nada → prueba la dirección <span class="mono">0x3F</span> con <span class="mono">firmware/tools/i2c_scanner</span>.</div>` },
+  { n: 13, title: 'Conecta la batería y prueba el servo',
+    parts: [P(compIcon('pb'), '1×', 'Batería portátil')],
+    html: `<ol>
+      <li>Enchufa el cable USB del Arduino UNO a la batería portátil. Se encienden las luces del UNO.</li>
+      <li>En el Monitor Serie escribe <span class="mono">open</span>: el servo gira a 90°. Luego <span class="mono">close</span>: vuelve a 0°.</li>
+      <li><b>Prueba de apagado automático:</b> deja el servo quieto 2–3 minutos y escribe <span class="mono">close</span>. Si no se mueve, la batería se apagó sola por bajo consumo: busca su modo de baja corriente antes de montar la llave.</li>
+      <li>Si el ESP32 se reinicia cada vez que el servo se mueve, falta el condensador de 470 µF entre los rieles de abajo.</li>
+      <li>Si el UNO se apaga unos segundos al mover el servo, saltó su fusible USB (unos 500 mA): el servo está forzando. Revisa que la llave no lo trabe.</li></ol>
+      <p>Cuando todo responda, ajusta la mecánica de la llave y sigue con la calibración de <span class="mono">docs/hardware.md</span> antes de cargar el firmware <span class="mono">noidea_esp32</span>.</p>` },
+];
+
+function inventory() {
+  const items = [
+    [compIcon('esp'), '1', 'ESP32 DevKit'], [compIcon('bb'), '1', 'Protoboard'], [compIcon('hc'), '1', 'Sensor ultrasonido HC-SR04'],
+    [compIcon('lcd'), '1', 'Pantalla LCD + driver I2C'], [compIcon('ws'), '1', 'Sensor de nivel de agua'], [compIcon('sv'), '1', 'Servomotor'],
+    [compIcon('rl'), '1', 'Relé 1 canal', 'opcional'], [compIcon('pb'), '1', 'Batería portátil'], [ICON.usb, '1', 'Cable USB del ESP32'],
+    [compIcon('uno'), '1', 'Arduino UNO', 'solo como adaptador de 5 V'], [ICON.usb, '1', 'Cable USB del Arduino UNO', 'sin cortar'], [wireIcon('HH', COL.blue), '6', 'Cables hembra-hembra'], [ICON.res, '3', 'Resistencias de 1,5 kΩ', 'marrón, verde, rojo'],
+    [wireIcon('HM', COL.red), '12', 'Cables hembra-macho'], [wireIcon('MM', COL.black), '5', 'Cables macho-macho', 'más 4 si los rieles están cortados'], [ICON.tape, '1', 'Cinta adhesiva'],
+    [ICON.meter, '1', 'Multímetro', 'recomendado'],
+  ];
+  return `<div class="grid-inv">${items.map(([i, q, n, sub]) => `<div class="inv">${i}<div class="q">${q}×</div><div class="n"><b>${n}</b>${sub || ''}</div></div>`).join('')}</div>
+  <div class="tip"><b>¿Te faltan cables hembra-hembra?</b> Usa dos hembra-macho y une sus puntas macho en la misma columna de la parte central de la protoboard (las 5 perforaciones de una columna están conectadas).</div>
+  <p class="skip"><b>Se quedan en la caja:</b> batería de 9 V y su broche, display de 7 segmentos, matriz LED, joystick, micrófono, motor paso a paso y su driver, módulo de temperatura, reloj RTC, teclado 4x4 y el lector RFID. La tarjeta o llavero RFID sí se usa después, como etiqueta del estanque.</p>`;
+}
+
+const main = document.getElementById('steps');
+const nav = document.getElementById('nav');
+STEPS.forEach(st => {
+  nav.insertAdjacentHTML('beforeend', `<a href="#paso-${st.n}">${st.n}</a>`);
+  const sec = document.createElement('section');
+  sec.className = 'step'; sec.id = 'paso-' + st.n;
+  let inner = `<div class="step-head"><div class="num">${st.n}</div><h2>${st.title}</h2></div>`;
+  if (st.inv) inner += inventory();
+  else inner += `<div class="body"><div class="parts"><div class="t">Piezas de este paso</div>${st.parts.map(p => `<div class="part">${p.icon}<div><div class="q">${p.q}</div><div class="n"><b>${p.name}</b>${p.sub}</div></div></div>`).join('')}</div>
+    <figure>${scene(st.n)}</figure></div><div class="txt">${st.html}</div>`;
+  sec.innerHTML = inner;
+  main.appendChild(sec);
+});
+document.getElementById('legend').innerHTML =
+  `<span>${wireIcon('HH', COL.blue)}hembra-hembra</span><span>${wireIcon('HM', COL.red)}hembra-macho</span><span>${wireIcon('MM', COL.black)}macho-macho</span>` +
+  `<span>Hembra = funda negra con agujero (va en un pin). Macho = punta metálica (va en la protoboard o en el conector del servo).</span>`;
+</script>
+
+</body></html>

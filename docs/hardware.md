@@ -3,7 +3,7 @@
 Controlador: **ESP32 DevKit (WROOM-32)**, conectado por Wi-Fi. Componentes del kit **KA-23** (UCN).
 Lo que no está disponible se marca **PENDIENTE**. El Arduino Uno del kit ya no se usa.
 
-Armado paso a paso: [manual-armado.md](manual-armado.md). Circuito completo (tabla de conexiones, verificación de tensiones y corrientes, montaje en protoboard y
+Armado paso a paso: [manual-armado.html](manual-armado.html). Circuito completo (tabla de conexiones, verificación de tensiones y corrientes, montaje en protoboard y
 diagrama Wokwi): [circuito.md](circuito.md).
 
 ## Componentes y uso

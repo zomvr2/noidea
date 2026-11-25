@@ -197,7 +197,7 @@ Trabajar **sin alimentación** (USB y fuente externa desconectados) hasta el pas
 2. **ESP32.** Insertarlo a caballo sobre la ranura central. En una protoboard de 830 puntos el DevKit suele dejar
    solo una fila libre por lado (o ninguna en un lado, según el modelo); si no queda espacio, usar dos protoboards
    unidas o conectar el ESP32 con cables dupont hembra-macho. Ubicar los pines por la serigrafía de la placa, no
-   por posición. Con la DevKit V1 de 30 pines lo más simple es dejarla **fuera** de la protoboard y conectar sus pines con cables dupont hembra (así lo muestra el [manual de armado](manual-armado.md)).
+   por posición. Con la DevKit V1 de 30 pines lo más simple es dejarla **fuera** de la protoboard y conectar sus pines con cables dupont hembra (así lo muestra el [manual de armado](manual-armado.html)).
 3. **Bus de 5 V USB.** Cable rojo de `VIN` del ESP32 al riel + superior; cable negro de `GND` al riel − superior.
 4. **Divisor del ECHO.** En una columna libre (nodo): R1 (1 kΩ) entre la columna del ECHO y el nodo; R2 (2 kΩ)
    entre el nodo y el riel − superior; cable verde claro del nodo a GPIO 19. **Medir** antes de seguir (paso 10).
