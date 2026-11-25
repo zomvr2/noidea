@@ -25,6 +25,10 @@ administrador escaneando la etiqueta NFC del estanque con el GPS del teléfono.
 
 ## Inicio rápido
 
+> **¿Usas un agente IA (Claude Code, Codex, Cursor…)?** Abre el repo con el agente y pídele
+> «prepara el proyecto». Las instrucciones que sigue están en
+> [AGENTS.md → Puesta en marcha desde cero](AGENTS.md#puesta-en-marcha-desde-cero-para-agentes-ia).
+
 La API (`https://noidea-api.vercel.app`) y la base de datos Supabase **ya están desplegadas**: para trabajar no hace
 falta crear cuentas propias. Lo único que no está en GitHub son las claves; pídelas al responsable del proyecto por un
 canal privado:

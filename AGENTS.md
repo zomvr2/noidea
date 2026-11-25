@@ -114,6 +114,55 @@ WebSockets (Markus Sattler) y ArduinoJson 7. Copiar `secrets.example.h` a `secre
 arduino-cli compile --fqbn esp32:esp32:esp32 firmware/noidea_esp32
 ```
 
+## Puesta en marcha desde cero (para agentes IA)
+
+Si te piden «prepara el proyecto», «déjalo funcionando» o es un clon recién descargado, sigue estos pasos en orden.
+Informa al final qué quedó listo y qué falta. **Nunca inventes claves ni las pidas por un canal público**: si falta una,
+pídela al usuario y continúa con lo que no dependa de ella.
+
+1. **Requisitos.** Comprueba `node -v` (≥ 24) y `git --version`. Si falta Node 24, dile al usuario cómo instalarlo
+   (no lo instales sin permiso). Para la app Android también hace falta Android Studio (SDK y `adb`).
+2. **Dependencias:** `npm install` en la raíz (instala app, api y shared).
+3. **Verificación base:** `npm run typecheck` y `npm test`. Deben pasar antes de seguir.
+4. **Archivos de claves** (todos en `.gitignore`; créalos desde su `.example`, nunca los subas):
+
+   | Archivo | Origen | Necesario para |
+   |---|---|---|
+   | `app/.env.local` | `app/.env.example` | App móvil |
+   | `api/.env.local` | `api/.env.example` | API local, simulador, `users:create` |
+   | `firmware/noidea_esp32/secrets.h` | `secrets.example.h` | Firmware del ESP32 |
+
+   Por defecto se usa el entorno **compartido** ya desplegado (API `https://noidea-api.vercel.app` y su proyecto
+   Supabase): `API_URL`, `EXPO_PUBLIC_API_URL` y `API_HOST` apuntan ahí. Los valores privados (clave pública y URL de
+   Supabase, `DEVICE_ID`, `DEVICE_SECRET_HEX`, y la clave secreta solo si el usuario va a usar scripts de la API)
+   los entrega el responsable del proyecto: pregúntaselos al usuario. Wi-Fi del ESP32: red de **2,4 GHz** del usuario.
+   Si el usuario tiene acceso al MCP de Supabase del proyecto, la URL y la clave pública se pueden obtener de ahí; el
+   `secret` del dispositivo, con `select id, secret from public.devices;`.
+5. **Firmware (Arduino).** Busca `arduino-cli` en el PATH; en Windows también viene con Arduino IDE 2 en
+   `%LOCALAPPDATA%\Programs\Arduino IDE\resources\app\lib\backend\resources\arduino-cli.exe`. Luego:
+
+   ```bash
+   arduino-cli config add board_manager.additional_urls https://espressif.github.io/arduino-esp32/package_esp32_index.json
+   arduino-cli core update-index && arduino-cli core install esp32:esp32
+   arduino-cli lib install ESP32Servo "LiquidCrystal I2C" WebSockets ArduinoJson
+   arduino-cli compile --fqbn esp32:esp32:esp32 firmware/noidea_esp32
+   arduino-cli compile --fqbn esp32:esp32:esp32 firmware/tools/i2c_scanner
+   ```
+
+   Para compilar sin `secrets.h` real, copia el sketch a una carpeta temporal con `secrets.example.h` como
+   `secrets.h`; no crees un `secrets.h` falso dentro del repo. **Subir a la placa** (`arduino-cli upload -p <COM>`)
+   solo con el ESP32 conectado y con permiso del usuario; `arduino-cli board list` muestra el puerto.
+   El armado físico lo hace una persona con el manual: https://zomvr2.github.io/noidea/ (`docs/manual-armado.html`).
+   Primero se prueba el cableado con `firmware/wokwi/sketch.ino` (copiado a una carpeta con su mismo nombre).
+6. **App Android** (opcional, requiere teléfono por USB con depuración activada o emulador):
+   `cd app && npx expo run:android`. Después, `npm run dev:app`. No funciona en Expo Go (MapLibre y NFC).
+7. **Sin hardware:** `npm run dev:api` y `npm run simulate` (necesitan `api/.env.local` completo).
+8. **Entorno propio** (solo si el usuario lo pide en vez del compartido): ver «Montar un entorno propio» en
+   [README.md](README.md). Aplicar migraciones y `seed.sql`, `npm run users:create -w api`, desplegar `api/` en Vercel.
+
+Lo que un agente **no** puede hacer por el usuario: armar el circuito, conectar la placa, crear cuentas, ni obtener
+claves que nadie le dio. Dilo claramente en el resumen final.
+
 ## Convenciones
 
 - TypeScript estricto. Sin `any` salvo en bordes con librerías sin tipos (comentado).
