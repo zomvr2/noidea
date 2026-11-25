@@ -10,6 +10,10 @@
 // Librerías (Gestor de librerías del IDE): ESP32Servo, LiquidCrystal I2C (Frank de Brabander),
 // WebSockets (Markus Sattler), ArduinoJson 7. Placa: "ESP32 Dev Module" (core esp32 3.x).
 
+// ArduinoJson y WebSockets se usan en net.ino, pero van aquí: el IDE genera los prototipos de net.ino
+// a continuación de estos #include, y sin ellos JsonObjectConst / WStype_t no están declarados.
+#include <ArduinoJson.h>
+#include <WebSocketsClient.h>
 #include <ESP32Servo.h>
 #include <LiquidCrystal_I2C.h>
 #include <Preferences.h>
