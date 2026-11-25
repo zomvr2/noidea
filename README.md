@@ -23,11 +23,39 @@ administrador escaneando la etiqueta NFC del estanque con el GPS del teléfono.
 | `packages/shared/` | Tipos y protocolo compartidos entre app, API y dispositivo |
 | `docs/` | Manual de armado, circuito, hardware, arquitectura, API, datos |
 
-## Inicio rápido
+## Preparar todo con un agente IA (recomendado)
 
-> **¿Usas un agente IA (Claude Code, Codex, Cursor…)?** Abre el repo con el agente y pídele
-> «prepara el proyecto». Las instrucciones que sigue están en
-> [AGENTS.md → Puesta en marcha desde cero](AGENTS.md#puesta-en-marcha-desde-cero-para-agentes-ia).
+Un agente de código (Claude Code, Codex, Cursor…) puede dejar el proyecto listo: instala dependencias, crea los
+archivos de claves, prepara Arduino y compila el firmware. Las instrucciones que sigue están en
+[AGENTS.md → Puesta en marcha desde cero](AGENTS.md#puesta-en-marcha-desde-cero-para-agentes-ia).
+
+1. **Instala lo básico** (Windows: con el instalador de cada página; en PowerShell también sirve `winget`):
+   - [Git](https://git-scm.com/downloads) · `winget install Git.Git`
+   - [Node.js 24 o superior](https://nodejs.org) · `winget install OpenJS.NodeJS`
+   - [Arduino IDE 2](https://www.arduino.cc/en/software) · `winget install ArduinoSA.IDE.stable`
+     (trae `arduino-cli`, que usa el agente)
+   - Un agente IA, por ejemplo [Claude Code](https://claude.com/claude-code) (app de escritorio o
+     `npm install -g @anthropic-ai/claude-code`).
+
+   Cierra y vuelve a abrir la terminal después de instalar, para que reconozca los comandos nuevos.
+2. **Descarga el repo:**
+
+   ```powershell
+   git clone https://github.com/zomvr2/noidea.git
+   ```
+
+   (Sin Git: botón verde **Code → Download ZIP** en GitHub y descomprímelo.)
+3. **Abre la carpeta `noidea` con el agente.** En Claude Code: `cd noidea` y luego `claude`; en la app de escritorio,
+   elige la carpeta.
+4. **Pídele:** «prepara el proyecto completo siguiendo AGENTS.md».
+5. **Responde lo que pregunte.** Te pedirá las claves privadas (te las pasa el responsable del proyecto) y el nombre
+   y la clave de tu Wi-Fi de 2,4 GHz para el ESP32. Para subir el firmware, conecta el ESP32 por USB y dale permiso.
+6. **Arma el circuito tú** con el [manual de armado](https://zomvr2.github.io/noidea/): el agente no puede hacer la
+   parte física.
+
+Al terminar, el agente debe decirte qué quedó listo y qué falta.
+
+## Inicio rápido (a mano)
 
 La API (`https://noidea-api.vercel.app`) y la base de datos Supabase **ya están desplegadas**: para trabajar no hace
 falta crear cuentas propias. Lo único que no está en GitHub son las claves; pídelas al responsable del proyecto por un
