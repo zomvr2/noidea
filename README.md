@@ -40,8 +40,8 @@ Estos archivos están en `.gitignore`: **nunca los subas**.
 ### 1. Dispensador ESP32 (Arduino)
 
 1. Arma el circuito con el **[manual de armado](docs/manual-armado.html)**: 13 pasos ilustrados tipo LEGO (piezas,
-   cables, pruebas). Es una página HTML: descarga el repo y ábrela con doble clic en el navegador (GitHub no la
-   muestra como página).
+   cables, pruebas). Míralo en línea: **https://zomvr2.github.io/noidea/**
+   (o abre el archivo con doble clic en el navegador).
 2. Instala Arduino IDE 2, el paquete de placas **esp32** (3.x) y las librerías **ESP32Servo**,
    **LiquidCrystal I2C**, **WebSockets** (Markus Sattler) y **ArduinoJson** 7 (detalle en [firmware/README.md](firmware/README.md)).
 3. Prueba el cableado con [`firmware/wokwi/sketch.ino`](firmware/wokwi/sketch.ino) (no necesita Wi-Fi ni claves).
@@ -89,7 +89,7 @@ npm test
 
 ## Documentación
 
-- [docs/manual-armado.html](docs/manual-armado.html) — **armado del dispensador paso a paso** (abrir en el navegador)
+- [docs/manual-armado.html](docs/manual-armado.html) — **armado del dispensador paso a paso** ([en línea](https://zomvr2.github.io/noidea/))
 - [docs/circuito.md](docs/circuito.md) — diseño eléctrico, tensiones, corrientes
 - [docs/hardware.md](docs/hardware.md) — componentes, pines, calibración
 - [docs/protocolo-dispositivo.md](docs/protocolo-dispositivo.md) — ESP32 ↔ nube
