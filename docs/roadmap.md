@@ -20,6 +20,7 @@ Cada hito termina en algo demostrable. Marcar `[x]` al completar.
 - [x] Login con Supabase Auth
 - [x] Mapa MapLibre + OpenFreeMap con nivel en vivo por estanque
 - [x] Ubicar estanque: NFC + GPS (admin)
+- [x] Eliminar estanque: NFC + confirmación (admin, borrado lógico)
 - [ ] Development build Android (`npx expo run:android`) y prueba con la tarjeta del kit
 
 ## Hito 3 — ESP32 en banco
@@ -34,11 +35,21 @@ Cada hito termina en algo demostrable. Marcar `[x]` al completar.
 
 ## Hito 5 — Familias y retiros en la app
 - [ ] Registro de familia y validación por admin; asignación de cuotas
-- [ ] Pantalla de retiro: NFC → litros → progreso en vivo → comprobante "≈ X L (estimado)"
+- [x] Pantalla de retiro: litros → NFC → progreso en vivo → comprobante "≈ X L (estimado)" (`app/src/app/withdraw.tsx`)
 - [ ] Historial y saldo
 
 ## Hito 6 — Alertas, recargas y municipio
-- [ ] Vista de alertas, solicitud y seguimiento de recarga por camión aljibe
+- [x] Diseño del flujo de recargas tipo despacho ([recargas.md](recargas.md))
+- [x] Base de datos y API de recargas (`/api/refills`), validadas en Postgres local (PGlite)
+- [x] Aplicar la migración en Supabase y desplegar la API
+- [x] Solicitud automática al bajar del umbral y prioridad (horas hasta vaciarse, familias)
+- [ ] Simulador: el estanque se vacía y sube al confirmar una recarga
+- [x] Municipal: pestaña Recargas, tomar, salir, posición en vivo (app en primer plano)
+- [x] Familias: chip "Municipal en camino · ≈ X min" y camión en el mapa
+- [x] Entrega verificada con NFC + subida de nivel ("≈ X L entregados (estimado)")
+- [ ] Probar el flujo de recarga en development build con dos teléfonos (municipal y familia)
+- [ ] Posición del municipal con la app en segundo plano
+- [ ] Vista de alertas y panel comunitario del municipal
 
 ## Hito 7 — Demo integrada
 - [ ] Guion, checklist de seguridad y lista de limitaciones

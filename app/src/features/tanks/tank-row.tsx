@@ -1,21 +1,37 @@
 import type { Tank } from "@noidea/shared";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import Animated, { interpolateColor, useAnimatedStyle } from "react-native-reanimated";
 import { SimulatorBadge } from "@/components/banner";
 import { Icon } from "@/components/icon";
 import { LevelBar } from "@/components/level-bar";
+import { RefillChip } from "@/features/refills/refill-chip";
+import { useTankRefill } from "@/features/refills/use-refills";
+import { usePressScale, useUpdatePulse } from "@/lib/motion";
 import { colors, radius } from "@/theme";
 import { formatLitres, LEVEL_COLORS, LEVEL_LABELS, levelState, percentText, timeAgo } from "./tank-status";
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 /** Tarjeta clara de un estanque (como las tarjetas «Completed» de la referencia). */
 export function TankRow({ tank, now, onPress }: { tank: Tank; now: number; onPress: () => void }) {
   const state = levelState(tank, now);
   const hasLevel = tank.level.volumeL !== null && state !== "offline";
+  const volume = hasLevel ? `≈ ${formatLitres(tank.level.volumeL!)}` : "Sin lectura";
+  const pulse = useUpdatePulse(volume);
+  const refill = useTankRefill(tank.id);
+  const { pressed, onPressIn, onPressOut, scaleStyle } = usePressScale(0.98);
+  const bg = useAnimatedStyle(() => ({
+    backgroundColor: interpolateColor(pressed.value, [0, 1], [colors.surfaceMuted, colors.border]),
+  }));
+
   return (
-    <Pressable
+    <AnimatedPressable
       onPress={onPress}
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
       accessibilityRole="button"
       accessibilityLabel={`${tank.name}. ${LEVEL_LABELS[state]}. ${percentText(tank, state)}`}
-      style={({ pressed }) => [styles.card, pressed && styles.pressed]}
+      style={[styles.card, bg, scaleStyle]}
     >
       <View style={styles.header}>
         <View style={styles.headerText}>
@@ -30,7 +46,7 @@ export function TankRow({ tank, now, onPress }: { tank: Tank; now: number; onPre
         <Icon name="chevronRight" size={16} color={colors.subtle} />
       </View>
       <View style={styles.stats}>
-        <Text style={styles.value}>{hasLevel ? `≈ ${formatLitres(tank.level.volumeL!)}` : "Sin lectura"}</Text>
+        <Animated.Text style={[styles.value, pulse]}>{volume}</Animated.Text>
         <Text style={styles.capacity}>de {formatLitres(tank.capacityL)}</Text>
       </View>
       <LevelBar
@@ -39,13 +55,13 @@ export function TankRow({ tank, now, onPress }: { tank: Tank; now: number; onPre
         trackColor={colors.track}
         height={8}
       />
-    </Pressable>
+      <RefillChip refill={refill} />
+    </AnimatedPressable>
   );
 }
 
 const styles = StyleSheet.create({
-  card: { backgroundColor: colors.surfaceMuted, borderRadius: radius.lg, padding: 16, gap: 10 },
-  pressed: { opacity: 0.85 },
+  card: { borderRadius: radius.lg, padding: 16, gap: 10 },
   header: { flexDirection: "row", alignItems: "center", gap: 10 },
   headerText: { flex: 1, gap: 2 },
   overline: { fontSize: 12, fontWeight: "600" },

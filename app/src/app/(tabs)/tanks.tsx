@@ -2,11 +2,14 @@ import type { Tank } from "@noidea/shared";
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
 import { ActivityIndicator, RefreshControl, SectionList, StyleSheet, Text, View } from "react-native";
+import Animated from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Banner } from "@/components/banner";
 import { Icon } from "@/components/icon";
+import { LiveBadge } from "@/components/live-badge";
 import { ScreenHeader, SectionTitle } from "@/components/screen-header";
 import { SegmentedTabs } from "@/components/segmented-tabs";
+import { useTabBarClearance } from "@/components/tab-bar";
 import { TankCard } from "@/features/tanks/tank-card";
 import { TankRow } from "@/features/tanks/tank-row";
 import {
@@ -17,6 +20,7 @@ import {
   type TankFilter,
 } from "@/features/tanks/tank-status";
 import { useTanks } from "@/features/tanks/use-tanks";
+import { enterUp } from "@/lib/motion";
 import { colors } from "@/theme";
 
 interface Section {
@@ -28,7 +32,8 @@ interface Section {
 /** Lista de estanques: los que requieren atención primero, como tarjetas destacadas. */
 export default function TanksScreen() {
   const insets = useSafeAreaInsets();
-  const { tanks, loaded, error, now, reload } = useTanks();
+  const tabBarClearance = useTabBarClearance();
+  const { tanks, loaded, error, now, connected, reload } = useTanks();
   const [filter, setFilter] = useState<TankFilter>("all");
   const [refreshing, setRefreshing] = useState(false);
 
@@ -59,7 +64,7 @@ export default function TanksScreen() {
   return (
     <View style={[styles.screen, { paddingTop: insets.top + 8 }]}>
       <View style={styles.header}>
-        <ScreenHeader title="Estanques" />
+        <ScreenHeader title="Estanques" right={loaded ? <LiveBadge connected={connected} /> : undefined} />
         <SegmentedTabs options={TANK_FILTERS} value={filter} onChange={setFilter} />
       </View>
 
@@ -67,24 +72,30 @@ export default function TanksScreen() {
         <ActivityIndicator style={styles.center} color={colors.primary} />
       ) : (
         <SectionList
+          // Al cambiar de filtro la lista se vuelve a montar y las tarjetas entran escalonadas.
+          key={filter}
           sections={sections}
           keyExtractor={(t) => String(t.id)}
-          contentContainerStyle={styles.list}
+          contentContainerStyle={[styles.list, { paddingBottom: tabBarClearance + 8 }]}
+          scrollIndicatorInsets={{ bottom: tabBarClearance }}
           stickySectionHeadersEnabled={false}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} colors={[colors.primary]} />}
           ListHeaderComponent={error ? <Banner tone="danger" text={error} /> : undefined}
           renderSectionHeader={({ section }) => <SectionTitle>{section.title}</SectionTitle>}
-          renderItem={({ item, section }) =>
-            section.highlight ? (
-              <TankCard tank={item} now={now} onDetails={() => open(item)} />
-            ) : (
-              <TankRow tank={item} now={now} onPress={() => open(item)} />
-            )
-          }
-          ItemSeparatorComponent={() => <View style={styles.gap} />}
-          SectionSeparatorComponent={() => <View style={styles.gap} />}
+          renderItem={({ item, index, section }) => (
+            // Solo las tarjetas de la primera pantalla se escalonan (stagger tiene tope).
+            <Animated.View entering={enterUp(section.highlight ? index : index + 1)}>
+              {section.highlight ? (
+                <TankCard tank={item} now={now} onDetails={() => open(item)} />
+              ) : (
+                <TankRow tank={item} now={now} onPress={() => open(item)} />
+              )}
+            </Animated.View>
+          )}
+          ItemSeparatorComponent={Gap}
+          SectionSeparatorComponent={Gap}
           ListEmptyComponent={
-            <View style={styles.empty}>
+            <Animated.View entering={enterUp()} style={styles.empty}>
               <View style={styles.emptyIcon}>
                 <Icon name="tanks" size={28} color={colors.primary} />
               </View>
@@ -98,12 +109,17 @@ export default function TanksScreen() {
                     ? "Todos los dispensadores están enviando datos."
                     : "Aún no hay estanques registrados."}
               </Text>
-            </View>
+            </Animated.View>
           }
         />
       )}
     </View>
   );
+}
+
+/** Separador a nivel de módulo: un componente en línea sería un tipo nuevo en cada render. */
+function Gap() {
+  return <View style={styles.gap} />;
 }
 
 const styles = StyleSheet.create({

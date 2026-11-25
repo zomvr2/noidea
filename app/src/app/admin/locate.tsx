@@ -19,6 +19,8 @@ import { Icon, type IconName } from "@/components/icon";
 import { TextField } from "@/components/text-field";
 import { cancelTagRead, readTagUid } from "@/features/nfc/read-tag-uid";
 import { ApiError, api } from "@/lib/api";
+import { MAP_HREF } from "@/lib/routes";
+import { duration } from "@/lib/motion";
 import { colors, radius } from "@/theme";
 
 type Step =
@@ -155,15 +157,23 @@ export default function LocateTank() {
                 const active = i === current;
                 return (
                   <View key={s.label} style={styles.stage}>
-                    <View
-                      style={[styles.stageDot, doneStage && styles.stageDone, active && styles.stageActive]}
+                    <Animated.View
+                      style={[
+                        styles.stageDot,
+                        {
+                          backgroundColor: doneStage ? colors.success : active ? colors.primary : colors.surfaceMuted,
+                          transform: [{ scale: active ? 1.12 : 1 }],
+                          transitionProperty: ["backgroundColor", "transform"],
+                          transitionDuration: duration.slow,
+                        },
+                      ]}
                     >
                       <Icon
                         name={doneStage ? "check" : s.icon}
                         size={14}
                         color={doneStage || active ? colors.onPrimary : colors.subtle}
                       />
-                    </View>
+                    </Animated.View>
                     <Text style={[styles.stageLabel, (doneStage || active) && styles.stageLabelOn]}>{s.label}</Text>
                   </View>
                 );
@@ -210,7 +220,7 @@ export default function LocateTank() {
           {step.kind === "scanning" && <Button label="Cancelar" variant="secondary" onPress={cancelScan} />}
           {step.kind === "done" && (
             <>
-              <Button label="Ver en el mapa" onPress={() => router.dismissTo("/(tabs)/index")} />
+              <Button label="Ver en el mapa" onPress={() => router.dismissTo(MAP_HREF)} />
               <Button label="Ubicar otro estanque" variant="ghost" onPress={start} />
             </>
           )}
@@ -357,12 +367,9 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: colors.surfaceMuted,
     alignItems: "center",
     justifyContent: "center",
   },
-  stageActive: { backgroundColor: colors.primary },
-  stageDone: { backgroundColor: colors.success },
   stageLabel: { fontSize: 12, color: colors.subtle, fontWeight: "500" },
   stageLabelOn: { color: colors.text },
   copy: { gap: 8, alignItems: "center" },

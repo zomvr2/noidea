@@ -20,3 +20,6 @@ firmware/**/secrets.h
 .vercel
 .env*
 !.env.example
+
+# Supabase CLI (estado local)
+supabase/.temp/

@@ -1,5 +1,7 @@
 import { type ComponentRef, type Ref, useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, type TextInputProps, View } from "react-native";
+import Animated from "react-native-reanimated";
+import { duration } from "@/lib/motion";
 import { colors, radius } from "@/theme";
 import { Icon, type IconName } from "./icon";
 
@@ -21,7 +23,17 @@ export function TextField({ label, icon, error, password, onFocus, onBlur, ref, 
   return (
     <View style={styles.wrap}>
       <Text style={styles.label}>{label}</Text>
-      <View style={[styles.field, { borderColor }, focused && styles.focused]}>
+      <Animated.View
+        style={[
+          styles.field,
+          {
+            borderColor,
+            backgroundColor: focused ? colors.surface : colors.surfaceMuted,
+            transitionProperty: ["borderColor", "backgroundColor"],
+            transitionDuration: duration.base,
+          },
+        ]}
+      >
         {icon && <Icon name={icon} size={18} color={focused ? colors.primary : colors.subtle} />}
         <TextInput
           ref={ref}
@@ -50,7 +62,7 @@ export function TextField({ label, icon, error, password, onFocus, onBlur, ref, 
             <Icon name={visible ? "eyeOff" : "eye"} size={20} color={colors.muted} />
           </Pressable>
         )}
-      </View>
+      </Animated.View>
     </View>
   );
 }
@@ -66,8 +78,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     borderRadius: radius.md,
     borderWidth: 1.5,
-    backgroundColor: colors.surfaceMuted,
   },
-  focused: { backgroundColor: colors.surface },
   input: { flex: 1, fontSize: 16, color: colors.text, paddingVertical: 12 },
 });

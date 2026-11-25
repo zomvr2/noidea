@@ -33,7 +33,24 @@
    nombre y crea el estanque con calibración por defecto.
 4. Realtime actualiza el mapa de todos los usuarios.
 
+## Flujo: eliminar un estanque (admin)
+
+Proceso inverso a «ubicar»: hay que estar junto al estanque.
+
+1. El admin abre «Eliminar estanque» (Perfil o detalle del estanque) y escanea su etiqueta NFC.
+   Desde el detalle, la etiqueta debe ser la de ese estanque.
+2. La app muestra el estanque de esa etiqueta y pide confirmación; llama `POST /api/tanks/remove { tagUid, tankId }`.
+3. `remove_tank` (borrado lógico): rechaza si hay un retiro en curso, borra la fila de `devices` (el ESP32 ya no
+   puede firmar ni recibir órdenes), resuelve alertas, cancela recargas pendientes y marca `deleted_at`.
+   El historial de retiros y lecturas se conserva; la etiqueta queda libre para otro estanque.
+4. Realtime entrega el `UPDATE` con `deleted_at` y la app quita el estanque del mapa.
+
 ## Flujo: retiro de agua
+
+En la app (familia): botón central de la barra, «Retirar agua aquí» en el detalle del estanque o Perfil → elige
+litros (solo cantidades que caben en su saldo) → escanea la etiqueta NFC del estanque → la app envía `{ tagUid,
+liters }` y muestra el avance en vivo (Realtime de `withdrawals`) con «Detener» → comprobante «≈ X L (estimado)».
+La app no decide nada: si la API rechaza (saldo, nivel, dispensador sin conexión…), muestra su mensaje.
 
 ```
 App            API (Vercel)                     Supabase                        ESP32

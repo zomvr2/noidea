@@ -1,8 +1,13 @@
 import type { Tank } from "@noidea/shared";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import Animated from "react-native-reanimated";
 import { Icon } from "@/components/icon";
+import { PulseDot } from "@/components/live-badge";
+import { duration, usePressScale, useUpdatePulse } from "@/lib/motion";
 import { colors, radius } from "@/theme";
 import { LEVEL_COLORS, levelState, percentText } from "./tank-status";
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 interface Props {
   tank: Tank;
@@ -15,25 +20,42 @@ interface Props {
 export function TankAvatar({ tank, now, selected, onPress }: Props) {
   const state = levelState(tank, now);
   const color = LEVEL_COLORS[state];
+  const pct = percentText(tank, state);
+  const { onPressIn, onPressOut, scaleStyle } = usePressScale(0.95);
+  const pulse = useUpdatePulse(pct);
+
   return (
-    <Pressable
+    <AnimatedPressable
       onPress={onPress}
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
       accessibilityRole="button"
       accessibilityState={{ selected: !!selected }}
-      accessibilityLabel={`${tank.name}, ${percentText(tank, state)}`}
-      style={({ pressed }) => [styles.pill, selected && styles.selected, pressed && styles.pressed]}
+      accessibilityLabel={`${tank.name}, ${pct}`}
+      style={[
+        styles.pill,
+        {
+          borderColor: selected ? colors.primary : colors.border,
+          transitionProperty: "borderColor",
+          transitionDuration: duration.base,
+        },
+        scaleStyle,
+      ]}
     >
       <View style={[styles.dot, { backgroundColor: `${color}22` }]}>
         <Icon name="tankFilled" size={16} color={color} />
-        <View style={[styles.status, { backgroundColor: color }]} />
+        {/* Solo el estado crítico late: es lo único que pide atención inmediata. */}
+        <View style={styles.status}>
+          <PulseDot color={color} size={7} active={state === "critical"} />
+        </View>
       </View>
       <View>
         <Text style={styles.name} numberOfLines={1}>
           {tank.name}
         </Text>
-        <Text style={styles.level}>{percentText(tank, state)}</Text>
+        <Animated.Text style={[styles.level, pulse]}>{pct}</Animated.Text>
       </View>
-    </Pressable>
+    </AnimatedPressable>
   );
 }
 
@@ -49,21 +71,16 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     backgroundColor: colors.surface,
     borderWidth: 1.5,
-    borderColor: colors.border,
   },
-  selected: { borderColor: colors.primary },
-  pressed: { opacity: 0.8 },
   dot: { width: 38, height: 38, borderRadius: 19, alignItems: "center", justifyContent: "center" },
   status: {
     position: "absolute",
     right: 0,
     bottom: 0,
-    width: 11,
-    height: 11,
+    padding: 2,
     borderRadius: 6,
-    borderWidth: 2,
-    borderColor: colors.surface,
+    backgroundColor: colors.surface,
   },
   name: { fontSize: 14, fontWeight: "600", color: colors.text, maxWidth: 150 },
-  level: { fontSize: 12, color: colors.muted, fontVariant: ["tabular-nums"] },
+  level: { alignSelf: "flex-start", fontSize: 12, color: colors.muted, fontVariant: ["tabular-nums"] },
 });

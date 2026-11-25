@@ -1,8 +1,8 @@
-import { normalizeTagUid } from "@noidea/shared";
+import { normalizeTagUid, type RemoveTankResponse } from "@noidea/shared";
 import { Hono } from "hono";
 import { z } from "zod";
 import { type AuthEnv, requireUser } from "../lib/auth.js";
-import { ApiError } from "../lib/errors.js";
+import { ApiError, fromDbError } from "../lib/errors.js";
 import { TANK_COLUMNS, type TankRow, toTank } from "../lib/mappers.js";
 import { db } from "../lib/supabase.js";
 
@@ -44,7 +44,12 @@ tanks.post("/locate", requireUser("admin"), async (c) => {
     location_marked_by: user.id,
   };
 
-  const { data: existing } = await db().from("tanks").select("id").eq("nfc_tag_uid", tagUid).maybeSingle();
+  const { data: existing } = await db()
+    .from("tanks")
+    .select("id")
+    .eq("nfc_tag_uid", tagUid)
+    .is("deleted_at", null)
+    .maybeSingle();
 
   let row: TankRow;
   if (existing) {
@@ -74,4 +79,47 @@ tanks.post("/locate", requireUser("admin"), async (c) => {
   });
 
   return c.json(toTank(row));
+});
+
+const removeSchema = z.object({
+  tagUid: z.string().min(4).max(40),
+  tankId: z.number().int().positive(),
+});
+
+/**
+ * Proceso inverso a /locate: el admin escanea la etiqueta junto al estanque y confirma.
+ * Borrado lógico (remove_tank): revoca el dispensador, cierra alertas y recargas pendientes.
+ */
+tanks.post("/remove", requireUser("admin"), async (c) => {
+  const body = removeSchema.safeParse(await c.req.json().catch(() => null));
+  if (!body.success) throw new ApiError(400, "BAD_REQUEST", z.prettifyError(body.error));
+  const tagUid = normalizeTagUid(body.data.tagUid);
+  const user = c.get("user");
+
+  await db().rpc("expire_stale_withdrawals");
+
+  const { data: tank } = await db()
+    .from("tanks")
+    .select("id, name")
+    .eq("nfc_tag_uid", tagUid)
+    .is("deleted_at", null)
+    .maybeSingle<{ id: number; name: string }>();
+  if (!tank) throw new ApiError(404, "TAG_UNKNOWN", "Esta etiqueta no corresponde a un estanque registrado.");
+  if (tank.id !== body.data.tankId) {
+    throw new ApiError(409, "TAG_MISMATCH", "La etiqueta escaneada no corresponde al estanque confirmado.");
+  }
+
+  const { data, error } = await db()
+    .rpc("remove_tank", { p_tank_id: tank.id, p_user_id: user.id })
+    .single<{ id: number; name: string; deleted_at: string }>();
+  if (error) throw fromDbError(error);
+
+  await db().from("audit_log").insert({
+    user_id: user.id,
+    action: "tank.remove",
+    payload: { tankId: data.id, tagUid, name: data.name },
+  });
+
+  const res: RemoveTankResponse = { id: data.id, name: data.name, deletedAt: data.deleted_at };
+  return c.json(res);
 });

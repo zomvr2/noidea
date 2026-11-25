@@ -1,9 +1,13 @@
 import type { Tank } from "@noidea/shared";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import Animated from "react-native-reanimated";
 import { SimulatorBadge } from "@/components/banner";
 import { Button } from "@/components/button";
 import { Icon } from "@/components/icon";
 import { LevelBar } from "@/components/level-bar";
+import { RefillChip } from "@/features/refills/refill-chip";
+import { useTankRefill } from "@/features/refills/use-refills";
+import { useUpdatePulse } from "@/lib/motion";
 import { colors, radius } from "@/theme";
 import { formatLitres, LEVEL_ICONS, LEVEL_LABELS, type LevelState, levelState, percentText, timeAgo } from "./tank-status";
 
@@ -28,6 +32,9 @@ export function TankCard({ tank, now, onDetails, onClose }: Props) {
   const state = levelState(tank, now);
   const tone = ON_DARK[state];
   const hasLevel = tank.level.volumeL !== null && state !== "offline";
+  const volume = hasLevel ? `≈ ${formatLitres(tank.level.volumeL!)}` : "—";
+  const pulse = useUpdatePulse(volume);
+  const refill = useTankRefill(tank.id);
 
   return (
     <View style={styles.card}>
@@ -57,10 +64,12 @@ export function TankCard({ tank, now, onDetails, onClose }: Props) {
         )}
       </View>
 
+      <RefillChip refill={refill} onDark />
+
       <View style={styles.stats}>
         <View>
           <Text style={styles.statLabel}>Nivel estimado</Text>
-          <Text style={styles.statValue}>{hasLevel ? `≈ ${formatLitres(tank.level.volumeL!)}` : "—"}</Text>
+          <Animated.Text style={[styles.statValue, pulse]}>{volume}</Animated.Text>
         </View>
         <View style={styles.statRight}>
           <Text style={styles.statLabel}>Capacidad</Text>
@@ -100,7 +109,7 @@ const styles = StyleSheet.create({
   stats: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end" },
   statRight: { alignItems: "flex-end" },
   statLabel: { fontSize: 12, color: colors.onPrimaryMuted },
-  statValue: { fontSize: 22, fontWeight: "700", color: colors.onPrimary, fontVariant: ["tabular-nums"] },
+  statValue: { alignSelf: "flex-start", fontSize: 22, fontWeight: "700", color: colors.onPrimary, fontVariant: ["tabular-nums"] },
   footnote: { fontSize: 12, color: colors.onPrimaryMuted },
   button: { marginTop: 4, minHeight: 46 },
 });

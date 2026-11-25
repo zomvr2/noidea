@@ -8,6 +8,20 @@ Diseño eléctrico derivado de [`firmware/noidea_esp32/config.h`](../firmware/no
   [`firmware/wokwi/README.md`](../firmware/wokwi/README.md)).
 - Resumen de hardware y calibración: [hardware.md](hardware.md).
 
+## 0. Montaje actual: solo con lo que hay en el kit
+
+El diagrama Wokwi refleja este montaje, no el diseño completo de §3. Diferencias:
+
+| Diseño completo (§3) | Montaje actual | Por qué / riesgo |
+|---|---|---|
+| HC-SR04 a 5 V + divisor 1 kΩ / 2 kΩ en ECHO | HC-SR04 a 5 V (riel + superior) + divisor con **3 × 1,5 kΩ**: ECHO → 1,5 kΩ → GPIO 19; GPIO 19 → 1,5 kΩ → 1,5 kΩ → GND | Misma proporción 1 : 2 → 5 V × 3k / 4,5k = **3,33 V**. Probado (2026-11-25): el sensor del kit (serigrafía **HC-SR04+**, de 3–5,5 V) no emitió eco ni a 3,3 V ni a 5 V con divisor, con alimentación y continuidad verificadas con multímetro y una prueba de lazo D23→D19 correcta (`pulseIn` midió 500 µs sobre PWM de 1 kHz). Se consideró **dañado** y se reemplazó: el sensor nuevo, a 5 V con este divisor, mide ≈ 107 mm con una mano delante (2026-11-25). **Nunca** ECHO directo con el sensor a 5 V |
+| Fuente externa 5 V ≥ 1 A | **Batería portátil → cable USB del Arduino UNO → UNO**, cuyos pines `5V` y `GND` van al riel inferior. El UNO no lleva programa: solo reparte los 5 V | Sin negociación de carga rápida entrega 5 V. ⚠ El USB del UNO tiene un fusible de ~500 mA: basta para un SG90, pero si la llave traba el servo el fusible corta y el UNO se reinicia. ⚠ Muchas baterías se apagan solas con poco consumo (el UNO, ~50 mA, ayuda a evitarlo): el servo quedaría sin fuerza y no podría cerrar. Probar: servo quieto 2–3 min y luego `close`. Usar `5V`, nunca `VIN` ni `3.3V` del UNO |
+| C1 470 µF junto al servo | Sin condensador | Si el ESP32 se reinicia o la LCD muestra basura al mover el servo, agregarlo |
+| Conversor de niveles I2C | SDA/SCL directos a 21/22 | Fuera de especificación (ver §4); suele funcionar |
+| ESP32 por USB | ESP32 por USB del **laptop** (programación y Monitor Serie) | El `5V` del UNO y el `VIN` del ESP32 **nunca** en el mismo riel + |
+
+Lo demás (LCD, sensor resistivo, servo en GPIO 18, relé reservado, tierra común entre rieles) es igual a §3.
+
 ## 1. Qué usa el firmware
 
 | Pin | Constante | Dirección | Uso en el código |
@@ -29,14 +43,14 @@ Diseño eléctrico derivado de [`firmware/noidea_esp32/config.h`](../firmware/no
 
 | Componente | Cantidad | Estado del dato |
 |---|---|---|
-| ESP32 DevKit WROOM-32 | 1 | En el repo. **Confirmar** variante: DevKitC de 38 pines (la de Wokwi) o DOIT de 30 pines |
+| ESP32 DevKit WROOM-32 | 1 | **DevKit V1 de 30 pines** (confirmado). En la serigrafía los GPIO llevan `D` (`D19` = GPIO 19) y el pin de 5 V se llama `VIN` |
 | Sensor ultrasónico HC-SR04 | 1 | En el repo. **Confirmar** que no es HC-SR04**P** (ese funciona a 3,3 V) |
 | Sensor de nivel de agua resistivo (módulo `+ / − / S`) | 1 | Modelo **no confirmado** |
 | Servomotor | 1 | Modelo **no confirmado**; el repo asume SG90 |
 | LCD 16x2 + módulo I2C (PCF8574) | 1 | Dirección 0x27 o 0x3F; pull-ups del módulo **no confirmados** |
 | Módulo relé 1 canal | 1 | **Reservado.** Modelo y lógica de disparo **no confirmados** (el código asume activo en bajo) |
 | Resistencia 1 kΩ | 1 | Divisor del ECHO |
-| Resistencia 2 kΩ (o 2 × 1 kΩ en serie) | 1 | Divisor del ECHO |
+| Resistencia 2 kΩ (o 2 × 1 kΩ en serie) | 1 | Divisor del ECHO. En el kit actual se usan 3 × 1,5 kΩ (ver §0) |
 | Condensador electrolítico 470 µF, ≥ 10 V | 1 | Junto al servo. **Confirmar** que está en el kit |
 | Fuente externa 5 V, ≥ 1 A | 1 | Solo para el servo. Tipo **no confirmado** |
 | Conversor de niveles I2C bidireccional (BSS138, 5 V ↔ 3,3 V) | 1 | **Recomendado**, ver §4 |
@@ -54,9 +68,9 @@ alimentación conmutada del sensor, gris relé).
 
 | Desde | Hacia | Color | Nota |
 |---|---|---|---|
-| ESP32 `5V` | Riel **+ superior** | Rojo | 5 V del USB. El ESP32 se alimenta por USB |
+| ESP32 `VIN` (5 V) | Riel **+ superior** | Rojo | 5 V del USB. El ESP32 se alimenta por USB |
 | ESP32 `GND` | Riel **− superior** | Negro | |
-| Fuente externa `+5 V` | Riel **+ inferior** | Naranja | **Nunca** unir con el riel + superior ni con el pin `5V` del ESP32 |
+| Fuente externa `+5 V` | Riel **+ inferior** | Naranja | **Nunca** unir con el riel + superior ni con el pin `VIN` del ESP32 |
 | Fuente externa `GND` | Riel **− inferior** | Negro | |
 | Riel − superior | Riel − inferior | Negro | **Tierra común obligatoria** (sin ella el servo no entiende el PWM) |
 | Condensador 470 µF `+` / `−` | Riel + inferior / − inferior | — | Junto al servo; respetar la polaridad (franja = −) |
@@ -136,7 +150,7 @@ batería de 9 V.
 
 ### Conexiones prohibidas
 
-- Fuente externa de 5 V al pin `5V` del ESP32 mientras el USB está conectado (retroalimenta el puerto del PC).
+- Fuente externa de 5 V al pin `VIN` del ESP32 mientras el USB está conectado (retroalimenta el puerto del PC).
 - Riel + superior con riel + inferior.
 - ECHO directo a GPIO 19.
 - Cualquier señal de 5 V a un GPIO.
@@ -169,9 +183,9 @@ imprescindible. El servo es un motor con su propio driver interno: no necesita d
 | Etiqueta RFID/NFC | No aparece | No tiene conexión eléctrica |
 | Relé activo en bajo | `wokwi-relay-module` con `transistor: "pnp"` | Polaridad no verificada en el simulador |
 
-El divisor del ECHO sí se dibuja con dos resistencias. Se comprobó en Wokwi con un sketch mínimo que, con el
-divisor, `pulseIn` en GPIO 19 mide 1008 mm cuando el HC-SR04 está a 100 cm, que la LCD responde en `0x27` y que el
-ADC del GPIO 34 lee el potenciómetro.
+El diagrama muestra el montaje actual (§0): HC-SR04 a 5 V con el divisor de 3 × 1,5 kΩ (`r_echo_a`, `r_echo_b`,
+`r_echo_c`). Con él, un sketch mínimo de `pulseIn` mide 1007 mm con el sensor a 100 cm. Antes se comprobó en
+Wokwi con `sketch.ino` que la LCD responde en `0x27` y que el ADC del GPIO 34 lee el potenciómetro.
 
 ## 7. Montaje en protoboard (paso a paso)
 
@@ -183,8 +197,8 @@ Trabajar **sin alimentación** (USB y fuente externa desconectados) hasta el pas
 2. **ESP32.** Insertarlo a caballo sobre la ranura central. En una protoboard de 830 puntos el DevKit suele dejar
    solo una fila libre por lado (o ninguna en un lado, según el modelo); si no queda espacio, usar dos protoboards
    unidas o conectar el ESP32 con cables dupont hembra-macho. Ubicar los pines por la serigrafía de la placa, no
-   por posición (la DevKitC de 38 pines y la de 30 pines tienen distinto orden).
-3. **Bus de 5 V USB.** Cable rojo de `5V` del ESP32 al riel + superior; cable negro de `GND` al riel − superior.
+   por posición. Con la DevKit V1 de 30 pines lo más simple es dejarla **fuera** de la protoboard y conectar sus pines con cables dupont hembra (así lo muestra el [manual de armado](manual-armado.md)).
+3. **Bus de 5 V USB.** Cable rojo de `VIN` del ESP32 al riel + superior; cable negro de `GND` al riel − superior.
 4. **Divisor del ECHO.** En una columna libre (nodo): R1 (1 kΩ) entre la columna del ECHO y el nodo; R2 (2 kΩ)
    entre el nodo y el riel − superior; cable verde claro del nodo a GPIO 19. **Medir** antes de seguir (paso 10).
 5. **HC-SR04.** VCC al riel + superior, GND al riel − superior, TRIG a GPIO 23, ECHO a la columna de R1.
@@ -208,7 +222,7 @@ Trabajar **sin alimentación** (USB y fuente externa desconectados) hasta el pas
 
 ## 8. Datos por confirmar
 
-1. Variante del ESP32 DevKit (38 o 30 pines). Los GPIO no cambian, la posición física sí.
+1. ~~Variante del ESP32 DevKit~~: confirmada, DevKit V1 de 30 pines.
 2. Modelo del servo: rango de pulso (el código usa 500–2400 µs), consumo y torque sobre la llave.
 3. Módulo de la LCD: dirección I2C (0x27 / 0x3F) y si trae pull-ups a 5 V.
 4. Sensor resistivo: modelo, consumo a 3,3 V y si su salida es directa o por transistor.

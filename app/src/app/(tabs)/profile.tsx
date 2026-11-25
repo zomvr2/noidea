@@ -3,13 +3,16 @@ import Constants from "expo-constants";
 import { router } from "expo-router";
 import type { ReactNode } from "react";
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import Animated, { interpolateColor, useAnimatedStyle } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useTabBarClearance } from "@/components/tab-bar";
 import { Icon, type IconName } from "@/components/icon";
 import { ScreenHeader, SectionTitle } from "@/components/screen-header";
 import { useSession } from "@/features/auth/use-session";
 import { QuotaCard } from "@/features/quota/quota-card";
 import { levelState } from "@/features/tanks/tank-status";
 import { useTanks } from "@/features/tanks/use-tanks";
+import { enterUp, usePressScale, useUpdatePulse } from "@/lib/motion";
 import { supabase } from "@/lib/supabase";
 import { colors, radius } from "@/theme";
 
@@ -22,6 +25,7 @@ function initials(name: string): string {
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
+  const tabBarClearance = useTabBarClearance();
   const { session, profile } = useSession();
   const { tanks, now } = useTanks();
   const isAdmin = profile?.role === "admin";
@@ -40,11 +44,12 @@ export default function ProfileScreen() {
   return (
     <ScrollView
       style={styles.screen}
-      contentContainerStyle={[styles.content, { paddingTop: insets.top + 8 }]}
+      contentContainerStyle={[styles.content, { paddingTop: insets.top + 8, paddingBottom: tabBarClearance + 16 }]}
+      scrollIndicatorInsets={{ bottom: tabBarClearance }}
     >
       <ScreenHeader title="Perfil" />
 
-      <View style={styles.identity}>
+      <Animated.View entering={enterUp(0)} style={styles.identity}>
         <View style={styles.avatar}>
           <Text style={styles.avatarText}>{initials(name)}</Text>
         </View>
@@ -63,29 +68,45 @@ export default function ProfileScreen() {
             </View>
           )}
         </View>
-      </View>
+      </Animated.View>
 
       <QuotaCard />
 
-      <View style={styles.statsCard}>
+      <Animated.View entering={enterUp(2)} style={styles.statsCard}>
         <Stat label="Estanques" value={tanks.length} />
         <View style={styles.divider} />
         <Stat label="Alertas" value={alerts} tone={alerts > 0 ? "#FFC966" : undefined} />
         <View style={styles.divider} />
         <Stat label="Sin conexión" value={offline} />
-      </View>
+      </Animated.View>
+
+      {profile?.role === "family" && (
+        <>
+          <SectionTitle>Agua</SectionTitle>
+          <Group index={3}>
+            <Row icon="tankFilled" label="Retirar agua" detail="NFC" onPress={() => router.push("/withdraw")} />
+          </Group>
+        </>
+      )}
 
       {isAdmin && (
         <>
           <SectionTitle>Administración</SectionTitle>
-          <Group>
+          <Group index={3}>
             <Row icon="nfc" label="Ubicar estanque" detail="NFC + GPS" onPress={() => router.push("/admin/locate")} />
+            <Row
+              icon="trash"
+              label="Eliminar estanque"
+              detail="NFC"
+              destructive
+              onPress={() => router.push("/admin/remove")}
+            />
           </Group>
         </>
       )}
 
       <SectionTitle>Cuenta</SectionTitle>
-      <Group>
+      <Group index={4}>
         <Row icon="logout" label="Cerrar sesión" destructive onPress={signOut} />
       </Group>
 
@@ -98,17 +119,24 @@ export default function ProfileScreen() {
 }
 
 function Stat({ label, value, tone }: { label: string; value: number; tone?: string }) {
+  const pulse = useUpdatePulse(value);
   return (
     <View style={styles.stat}>
-      <Text style={[styles.statValue, tone ? { color: tone } : null]}>{value}</Text>
+      <Animated.Text style={[styles.statValue, tone ? { color: tone } : null, pulse]}>{value}</Animated.Text>
       <Text style={styles.statLabel}>{label}</Text>
     </View>
   );
 }
 
-function Group({ children }: { children: ReactNode }) {
-  return <View style={styles.group}>{children}</View>;
+function Group({ children, index }: { children: ReactNode; index: number }) {
+  return (
+    <Animated.View entering={enterUp(index)} style={styles.group}>
+      {children}
+    </Animated.View>
+  );
 }
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 function Row({
   icon,
@@ -124,11 +152,17 @@ function Row({
   onPress: () => void;
 }) {
   const color = destructive ? colors.danger : colors.text;
+  const { pressed, onPressIn, onPressOut } = usePressScale();
+  const bg = useAnimatedStyle(() => ({
+    backgroundColor: interpolateColor(pressed.value, [0, 1], ["rgba(230,234,232,0)", colors.border]),
+  }));
   return (
-    <Pressable
+    <AnimatedPressable
       onPress={onPress}
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
       accessibilityRole="button"
-      style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
+      style={[styles.row, bg]}
     >
       <View style={[styles.rowIcon, destructive && { backgroundColor: colors.dangerSoft }]}>
         <Icon name={icon} size={18} color={destructive ? colors.danger : colors.primary} />
@@ -136,7 +170,7 @@ function Row({
       <Text style={[styles.rowLabel, { color }]}>{label}</Text>
       {detail && <Text style={styles.rowDetail}>{detail}</Text>}
       {!destructive && <Icon name="chevronRight" size={16} color={colors.subtle} />}
-    </Pressable>
+    </AnimatedPressable>
   );
 }
 
@@ -176,7 +210,6 @@ const styles = StyleSheet.create({
   divider: { width: 1, backgroundColor: "rgba(255,255,255,0.15)" },
   group: { backgroundColor: colors.surfaceMuted, borderRadius: radius.lg, overflow: "hidden" },
   row: { flexDirection: "row", alignItems: "center", gap: 12, minHeight: 56, paddingHorizontal: 14 },
-  rowPressed: { backgroundColor: colors.border },
   rowIcon: {
     width: 34,
     height: 34,

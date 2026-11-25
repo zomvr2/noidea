@@ -1,27 +1,33 @@
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from "react-native";
-import Animated, { FadeInDown, FadeOutDown } from "react-native-reanimated";
+import Animated, { FadeOutDown } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Banner } from "@/components/banner";
 import { Chip } from "@/components/chip";
+import { useTabBarClearance } from "@/components/tab-bar";
 import { useSession } from "@/features/auth/use-session";
-import { TankMap } from "@/features/map/tank-map";
+import { TankMap, type TruckMarker } from "@/features/map/tank-map";
+import { formatEta } from "@/features/refills/refill-status";
+import { useRefills } from "@/features/refills/use-refills";
 import { QuotaPill } from "@/features/quota/quota-card";
 import { TankAvatar } from "@/features/tanks/tank-avatar";
 import { TankCard } from "@/features/tanks/tank-card";
 import { matchesFilter, sortByPriority, TANK_FILTERS, type TankFilter } from "@/features/tanks/tank-status";
 import { useTanks } from "@/features/tanks/use-tanks";
+import { enterCard, enterUp, fadeIn, fadeOut, layoutSpring } from "@/lib/motion";
 import { colors, elevation, radius } from "@/theme";
 
-/** Altura aproximada de la UI inferior (fila de estanques o tarjeta), para centrar la cámara. */
-const BOTTOM_UI = 250;
+/** Altura aproximada de la UI inferior (fila de estanques o tarjeta), sin contar la barra de pestañas. */
+const BOTTOM_UI = 190;
 
 /** Mapa de estanques con su nivel en tiempo real. */
 export default function MapScreen() {
   const insets = useSafeAreaInsets();
+  const tabBarClearance = useTabBarClearance();
   const { profile } = useSession();
   const { tanks, error, loaded, now } = useTanks();
+  const { refills } = useRefills();
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [filter, setFilter] = useState<TankFilter>("all");
 
@@ -35,6 +41,24 @@ export default function MapScreen() {
     [located, now],
   );
 
+  // Solo hay posición mientras el municipal va en camino (se borra al llegar).
+  const trucks = useMemo<TruckMarker[]>(
+    () =>
+      refills.flatMap((r) =>
+        r.status === "in_transit" && r.position
+          ? [
+              {
+                refillId: r.id,
+                latitude: r.position.latitude,
+                longitude: r.position.longitude,
+                label: r.etaS !== null ? `Municipal · ${formatEta(r.etaS)}` : "Municipal",
+              },
+            ]
+          : [],
+      ),
+    [refills],
+  );
+
   const selected = tanks.find((t) => t.id === selectedId) ?? null;
   const unlocated = tanks.length - located.length;
   const anySimulated = tanks.some((t) => t.simulated);
@@ -46,16 +70,17 @@ export default function MapScreen() {
       {loaded ? (
         <TankMap
           tanks={visible}
+          trucks={trucks}
           now={now}
           selectedId={selectedId}
           onSelect={setSelectedId}
-          padding={{ top: topUi, bottom: BOTTOM_UI }}
+          padding={{ top: topUi, bottom: BOTTOM_UI + tabBarClearance }}
         />
       ) : (
-        <View style={styles.loading}>
+        <Animated.View exiting={fadeOut} style={styles.loading}>
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>Cargando estanques…</Text>
-        </View>
+        </Animated.View>
       )}
 
       <View style={[styles.top, { paddingTop: insets.top + 8 }]} pointerEvents="box-none">
@@ -94,14 +119,14 @@ export default function MapScreen() {
         </View>
       </View>
 
-      <View style={styles.bottom} pointerEvents="box-none">
+      <View style={[styles.bottom, { bottom: tabBarClearance }]} pointerEvents="box-none">
         {!selected && (
           <View style={[styles.quota, styles.chipShadow]}>
             <QuotaPill onPress={() => router.navigate("/(tabs)/profile")} />
           </View>
         )}
         {selected ? (
-          <Animated.View key={selected.id} entering={FadeInDown.duration(220)} exiting={FadeOutDown.duration(160)}>
+          <Animated.View key={selected.id} entering={enterCard} exiting={FadeOutDown.duration(160)}>
             <View style={styles.cardShadow}>
               <TankCard
                 tank={selected}
@@ -114,20 +139,24 @@ export default function MapScreen() {
         ) : (
           loaded &&
           (visible.length > 0 ? (
-            <Animated.View entering={FadeInDown.duration(220)}>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.strip}>
-                {visible.map((t) => (
-                  <View key={t.id} style={styles.chipShadow}>
-                    <TankAvatar tank={t} now={now} onPress={() => setSelectedId(t.id)} />
-                  </View>
-                ))}
-              </ScrollView>
-            </Animated.View>
+            // Pocos estanques por comunidad: un ScrollView basta (no hace falta virtualizar).
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.strip}>
+              {visible.map((t, i) => (
+                <Animated.View
+                  key={t.id}
+                  entering={enterUp(i)}
+                  layout={layoutSpring}
+                  style={styles.chipShadow}
+                >
+                  <TankAvatar tank={t} now={now} onPress={() => setSelectedId(t.id)} />
+                </Animated.View>
+              ))}
+            </ScrollView>
           ) : (
             located.length > 0 && (
-              <View style={[styles.empty, elevation]}>
+              <Animated.View entering={fadeIn} style={[styles.empty, elevation]}>
                 <Text style={styles.emptyText}>Ningún estanque coincide con este filtro.</Text>
-              </View>
+              </Animated.View>
             )
           ))
         )}
@@ -145,7 +174,7 @@ const styles = StyleSheet.create({
   chips: { paddingHorizontal: 16, gap: 8, paddingBottom: 6 },
   chipShadow: { borderRadius: radius.pill, ...elevation, shadowOpacity: 0.08 },
   banners: { paddingHorizontal: 16, gap: 8 },
-  bottom: { position: "absolute", left: 0, right: 0, bottom: 12 },
+  bottom: { position: "absolute", left: 0, right: 0 },
   quota: { alignSelf: "flex-start", marginLeft: 16, marginBottom: 4 },
   strip: { paddingHorizontal: 16, gap: 8, paddingVertical: 6 },
   cardShadow: { marginHorizontal: 16, borderRadius: radius.lg, ...elevation },

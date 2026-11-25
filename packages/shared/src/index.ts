@@ -84,6 +84,8 @@ export interface Withdrawal {
   familyId: number;
   tankId: number;
   requestedL: number;
+  /** Tiempo de apertura ordenado al dispensador (litros / caudal calibrado; tope 60 s). */
+  targetMs: number;
   deliveredL: number | null;
   measurementMethod: MeasurementMethod;
   levelDeltaL: number | null;
@@ -108,12 +110,42 @@ export interface Alert {
 
 export type RefillStatus = "requested" | "scheduled" | "in_transit" | "delivered" | "cancelled";
 
+/** Estados en que la recarga sigue abierta (hay a lo más una por estanque). */
+export const OPEN_REFILL_STATUSES: readonly RefillStatus[] = ["requested", "scheduled", "in_transit"];
+
+/** Posición del municipal mientras va en camino (se borra al llegar). */
+export interface RefillPosition {
+  latitude: number;
+  longitude: number;
+  at: string;
+}
+
+/**
+ * Recarga por camión aljibe (docs/recargas.md). El volumen entregado es una estimación por diferencia
+ * de nivel (`measurementMethod: "estimated_level"`): mostrar siempre "≈ X L (estimado)".
+ */
 export interface RefillRequest {
   id: number;
   tankId: number;
   status: RefillStatus;
+  source: "auto" | "manual";
   requestedVolumeL: number | null;
   notes: string | null;
+  /** Municipal que tomó la recarga. */
+  assignedTo: string | null;
+  /** Nombre corto visible para las familias, p. ej. "Juan P.". */
+  assignedName: string | null;
+  acceptedAt: string | null;
+  departedAt: string | null;
+  arrivedAt: string | null;
+  deliveredAt: string | null;
+  levelBeforeL: number | null;
+  levelAfterL: number | null;
+  deliveredEstimatedL: number | null;
+  measurementMethod: "estimated_level" | null;
+  position: RefillPosition | null;
+  /** Tiempo estimado de llegada en segundos (línea recta, velocidad supuesta). */
+  etaS: number | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -137,12 +169,122 @@ export interface LocateTankRequest {
 }
 export type LocateTankResponse = Tank;
 
+/**
+ * POST /api/tanks/remove (solo admin): proceso inverso a «ubicar». El admin escanea la etiqueta junto
+ * al estanque y confirma; `tankId` debe coincidir con el estanque de esa etiqueta (lo que vio en la
+ * confirmación). Borrado lógico: el historial se conserva y la etiqueta queda libre.
+ */
+export interface RemoveTankRequest {
+  tagUid: string;
+  tankId: number;
+}
+export interface RemoveTankResponse {
+  id: number;
+  name: string;
+  deletedAt: string;
+}
+
 /** POST /api/withdrawals (familia): pide un retiro en el estanque escaneado. */
 export interface CreateWithdrawalRequest {
   tagUid: string;
   liters: number;
 }
 export type CreateWithdrawalResponse = Withdrawal;
+
+/**
+ * Recargas (admin/municipal). Todas responden `RefillRequest` salvo GET /api/refills.
+ * POST /api/refills                 { tankId, volumeL?, notes? }  solicitud manual
+ * POST /api/refills/:id/claim       «Tomar recarga»
+ * POST /api/refills/:id/release     «Soltar» (vuelve a requested)
+ * POST /api/refills/:id/start       «Salir» (in_transit)
+ * POST /api/refills/:id/position    { latitude, longitude, accuracyM } cada ~10 s en camino
+ * POST /api/refills/:id/arrive      { tagUid } etiqueta NFC del estanque
+ * POST /api/refills/:id/deliver     «Terminé»
+ * POST /api/refills/:id/cancel
+ */
+export interface CreateRefillRequest {
+  tankId: number;
+  volumeL?: number;
+  notes?: string;
+}
+export interface RefillPositionRequest {
+  latitude: number;
+  longitude: number;
+  accuracyM: number | null;
+}
+export interface ArriveRefillRequest {
+  tagUid: string;
+}
+
+/** GET /api/refills (admin/municipal): abiertas por prioridad + entregadas en las últimas 24 h. */
+export interface RefillListItem {
+  refill: RefillRequest;
+  tank: { id: number; name: string; location: TankLocation | null; level: TankLevel; capacityL: number };
+  /** ≈ horas hasta vaciarse según el consumo reciente; null si no hay consumo medible. */
+  hoursToEmpty: number | null;
+  /** Familias con retiros en este estanque en los últimos 30 días. */
+  families: number;
+  /** Mayor = más urgente. */
+  priority: number;
+}
+export interface RefillListResponse {
+  items: RefillListItem[];
+}
+
+/** Velocidad media supuesta del camión para la ETA (sin rutas reales). */
+export const REFILL_ASSUMED_SPEED_KMH = 30;
+/** Cada cuánto la app del municipal envía su posición mientras va en camino. */
+export const REFILL_POSITION_INTERVAL_MS = 10_000;
+
+/** Distancia en metros entre dos puntos (haversine). */
+export function distanceM(a: { latitude: number; longitude: number }, b: { latitude: number; longitude: number }): number {
+  const R = 6_371_000;
+  const rad = (d: number) => (d * Math.PI) / 180;
+  const dLat = rad(b.latitude - a.latitude);
+  const dLon = rad(b.longitude - a.longitude);
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(rad(a.latitude)) * Math.cos(rad(b.latitude)) * Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+
+/** ETA aproximada en segundos: línea recta × 1,3 (calles) a la velocidad supuesta. */
+export function refillEtaSeconds(distance: number, speedKmh = REFILL_ASSUMED_SPEED_KMH): number {
+  return Math.round(((distance * 1.3) / 1000 / speedKmh) * 3600);
+}
+
+/**
+ * ≈ horas hasta vaciarse a partir de lecturas (volumen estimado) ordenadas o no por fecha.
+ * Usa la caída entre la primera y la última lectura válidas; null si el nivel no baja.
+ */
+export function estimateHoursToEmpty(readings: { volumeL: number | null; at: string }[]): number | null {
+  const valid = readings
+    .filter((r): r is { volumeL: number; at: string } => r.volumeL !== null)
+    .sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
+  if (valid.length < 2) return null;
+  const first = valid[0]!;
+  const last = valid[valid.length - 1]!;
+  const hours = (Date.parse(last.at) - Date.parse(first.at)) / 3_600_000;
+  const drop = first.volumeL - last.volumeL;
+  if (hours <= 0 || drop <= 0) return null;
+  return Math.round((last.volumeL / (drop / hours)) * 10) / 10;
+}
+
+/**
+ * Prioridad de una recarga: más urgente si se vacía pronto, si el nivel ya es bajo y si atiende a más familias.
+ * Puramente orientativa (las entradas son estimaciones).
+ */
+export function refillPriority(input: { hoursToEmpty: number | null; percent: number | null; families: number }): number {
+  const urgency = input.hoursToEmpty === null ? 0 : 100 / Math.max(1, input.hoursToEmpty);
+  const emptiness = input.percent === null ? 0 : Math.max(0, 100 - input.percent) / 2;
+  return Math.round((urgency + emptiness + input.families * 5) * 10) / 10;
+}
+
+/** "Juan Pérez Soto" -> "Juan P.". Nombre corto del municipal para las familias. */
+export function shortDisplayName(fullName: string): string {
+  const parts = fullName.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "Municipal";
+  if (parts.length === 1) return parts[0]!;
+  return `${parts[0]} ${parts[1]![0]!.toUpperCase()}.`;
+}
 
 /** Tablas de Supabase que la app escucha con Realtime (postgres_changes). */
 export const REALTIME_TABLES = ["tanks", "withdrawals", "alerts", "refill_requests"] as const;
@@ -219,7 +361,7 @@ export function requestSigningString(ts: number, body: string): string {
 export function sanitizeLcdText(text: string): string {
   return text
     .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
+    .replace(/[\u0300-\u036f]/g, "") // marcas diacríticas combinantes (acentos)
     .replace(/[^\x20-\x7e]/g, "?")
     .replace(/\|/g, "/") // el separador de la firma no puede aparecer en el texto
     .slice(0, LCD_COLUMNS);
@@ -340,6 +482,7 @@ export function toWithdrawal(r: WithdrawalRow): Withdrawal {
     familyId: r.family_id,
     tankId: r.tank_id,
     requestedL: Number(r.requested_l),
+    targetMs: r.target_ms,
     deliveredL: num(r.delivered_l),
     measurementMethod: r.measurement_method,
     levelDeltaL: num(r.level_delta_l),
@@ -348,6 +491,65 @@ export function toWithdrawal(r: WithdrawalRow): Withdrawal {
     closeReason: r.close_reason,
     createdAt: r.created_at,
     finishedAt: r.finished_at,
+  };
+}
+
+/** Columnas de public.refill_requests que lee la app y la API. */
+export const REFILL_COLUMNS =
+  "id, tank_id, status, source, requested_volume_l, notes, assigned_to, assigned_name, accepted_at, departed_at, " +
+  "arrived_at, delivered_at, level_before_l, level_after_l, delivered_estimated_l, measurement_method, " +
+  "last_latitude, last_longitude, last_position_at, eta_s, created_at, updated_at";
+
+export interface RefillRow {
+  id: number;
+  tank_id: number;
+  status: RefillStatus;
+  source: RefillRequest["source"];
+  requested_volume_l: number | string | null;
+  notes: string | null;
+  assigned_to: string | null;
+  assigned_name: string | null;
+  accepted_at: string | null;
+  departed_at: string | null;
+  arrived_at: string | null;
+  delivered_at: string | null;
+  level_before_l: number | string | null;
+  level_after_l: number | string | null;
+  delivered_estimated_l: number | string | null;
+  measurement_method: RefillRequest["measurementMethod"];
+  last_latitude: number | null;
+  last_longitude: number | null;
+  last_position_at: string | null;
+  eta_s: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export function toRefill(r: RefillRow): RefillRequest {
+  return {
+    id: r.id,
+    tankId: r.tank_id,
+    status: r.status,
+    source: r.source,
+    requestedVolumeL: num(r.requested_volume_l),
+    notes: r.notes,
+    assignedTo: r.assigned_to,
+    assignedName: r.assigned_name,
+    acceptedAt: r.accepted_at,
+    departedAt: r.departed_at,
+    arrivedAt: r.arrived_at,
+    deliveredAt: r.delivered_at,
+    levelBeforeL: num(r.level_before_l),
+    levelAfterL: num(r.level_after_l),
+    deliveredEstimatedL: num(r.delivered_estimated_l),
+    measurementMethod: r.measurement_method,
+    position:
+      r.last_latitude !== null && r.last_longitude !== null
+        ? { latitude: r.last_latitude, longitude: r.last_longitude, at: r.last_position_at ?? "" }
+        : null,
+    etaS: r.eta_s,
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
   };
 }
 

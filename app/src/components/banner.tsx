@@ -1,4 +1,6 @@
 import { StyleSheet, Text, View } from "react-native";
+import Animated from "react-native-reanimated";
+import { enterUp, fadeOut, layoutSpring } from "@/lib/motion";
 import { colors, radius } from "@/theme";
 import { Icon, type IconName } from "./icon";
 
@@ -10,17 +12,20 @@ const TONES: Record<Tone, { bg: string; fg: string; icon: IconName }> = {
   danger: { bg: colors.dangerSoft, fg: colors.danger, icon: "error" },
 };
 
-/** Aviso en línea con icono. `role="alert"` para lectores de pantalla en errores. */
+/** Aviso en línea con icono; entra deslizando y sale con un fundido. `role="alert"` para lectores de pantalla en errores. */
 export function Banner({ tone = "info", text, icon }: { tone?: Tone; text: string; icon?: IconName }) {
   const t = TONES[tone];
   return (
-    <View
+    <Animated.View
+      entering={enterUp()}
+      exiting={fadeOut}
+      layout={layoutSpring}
       style={[styles.banner, { backgroundColor: t.bg }]}
       accessibilityRole={tone === "danger" ? "alert" : undefined}
     >
       <Icon name={icon ?? t.icon} size={16} color={t.fg} />
       <Text style={[styles.text, { color: t.fg }]}>{text}</Text>
-    </View>
+    </Animated.View>
   );
 }
 

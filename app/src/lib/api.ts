@@ -1,9 +1,17 @@
 import type {
   ApiErrorBody,
+  ArriveRefillRequest,
+  CreateRefillRequest,
   CreateWithdrawalRequest,
   CreateWithdrawalResponse,
   LocateTankRequest,
   LocateTankResponse,
+  RefillListResponse,
+  RefillPositionRequest,
+  RefillRequest,
+  RemoveTankRequest,
+  RemoveTankResponse,
+  Withdrawal,
 } from "@noidea/shared";
 import { API_URL } from "./config";
 import { supabase } from "./supabase";
@@ -44,5 +52,18 @@ async function request<T>(path: string, body?: unknown): Promise<T> {
 
 export const api = {
   locateTank: (req: LocateTankRequest) => request<LocateTankResponse>("/tanks/locate", req),
+  removeTank: (req: RemoveTankRequest) => request<RemoveTankResponse>("/tanks/remove", req),
   createWithdrawal: (req: CreateWithdrawalRequest) => request<CreateWithdrawalResponse>("/withdrawals", req),
+  stopWithdrawal: (id: number) => request<Withdrawal>(`/withdrawals/${id}/stop`, {}),
+  // Recargas (admin/municipal). Ver docs/recargas.md.
+  listRefills: () => request<RefillListResponse>("/refills"),
+  requestRefill: (req: CreateRefillRequest) => request<RefillRequest>("/refills", req),
+  claimRefill: (id: number) => request<RefillRequest>(`/refills/${id}/claim`, {}),
+  releaseRefill: (id: number) => request<RefillRequest>(`/refills/${id}/release`, {}),
+  startRefill: (id: number) => request<RefillRequest>(`/refills/${id}/start`, {}),
+  sendRefillPosition: (id: number, req: RefillPositionRequest) =>
+    request<RefillRequest>(`/refills/${id}/position`, req),
+  arriveRefill: (id: number, req: ArriveRefillRequest) => request<RefillRequest>(`/refills/${id}/arrive`, req),
+  deliverRefill: (id: number) => request<RefillRequest>(`/refills/${id}/deliver`, {}),
+  cancelRefill: (id: number) => request<RefillRequest>(`/refills/${id}/cancel`, {}),
 };

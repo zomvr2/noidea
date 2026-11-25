@@ -30,6 +30,7 @@ withdrawals.post("/", requireUser("family"), async (c) => {
     .from("tanks")
     .select("id")
     .eq("nfc_tag_uid", normalizeTagUid(body.data.tagUid))
+    .is("deleted_at", null)
     .maybeSingle();
   if (!tank) throw new ApiError(404, "TAG_UNKNOWN", "Esta etiqueta no corresponde a un estanque registrado.");
 

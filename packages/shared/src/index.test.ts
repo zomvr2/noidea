@@ -52,3 +52,59 @@ describe("toQuotaBalance", () => {
     expect(q.availableL).toBe(0);
   });
 });
+
+describe("recargas", () => {
+  it("distancia y ETA aproximada", async () => {
+    const { distanceM, refillEtaSeconds } = await import("./index");
+    // ~1,11 km por 0,01° de latitud.
+    const d = distanceM({ latitude: -33.0, longitude: -70.0 }, { latitude: -33.01, longitude: -70.0 });
+    expect(Math.round(d)).toBeGreaterThan(1100);
+    expect(Math.round(d)).toBeLessThan(1120);
+    // 1 km × 1,3 a 30 km/h = 156 s.
+    expect(refillEtaSeconds(1000)).toBe(156);
+  });
+
+  it("horas hasta vaciarse según la caída de nivel", async () => {
+    const { estimateHoursToEmpty } = await import("./index");
+    expect(
+      estimateHoursToEmpty([
+        { volumeL: 4, at: "2026-11-11T12:00:00Z" },
+        { volumeL: 6, at: "2026-11-11T10:00:00Z" },
+        { volumeL: null, at: "2026-11-11T11:00:00Z" },
+      ]),
+    ).toBe(4);
+    expect(estimateHoursToEmpty([{ volumeL: 4, at: "2026-11-11T12:00:00Z" }])).toBeNull();
+    expect(
+      estimateHoursToEmpty([
+        { volumeL: 4, at: "2026-11-11T10:00:00Z" },
+        { volumeL: 5, at: "2026-11-11T12:00:00Z" },
+      ]),
+    ).toBeNull();
+  });
+
+  it("prioriza lo que se vacía antes", async () => {
+    const { refillPriority } = await import("./index");
+    const soon = refillPriority({ hoursToEmpty: 2, percent: 20, families: 3 });
+    const later = refillPriority({ hoursToEmpty: 20, percent: 20, families: 3 });
+    expect(soon).toBeGreaterThan(later);
+  });
+
+  it("nombre corto del municipal", async () => {
+    const { shortDisplayName } = await import("./index");
+    expect(shortDisplayName("Juan pérez Soto")).toBe("Juan P.");
+    expect(shortDisplayName("Ana")).toBe("Ana");
+    expect(shortDisplayName("  ")).toBe("Municipal");
+  });
+
+  it("mapea filas con numeric como string y posición", async () => {
+    const { toRefill } = await import("./index");
+    const r = toRefill({
+      id: 1, tank_id: 2, status: "in_transit", source: "auto", requested_volume_l: "3.5", notes: null,
+      assigned_to: "u", assigned_name: "Juan P.", accepted_at: null, departed_at: null, arrived_at: null,
+      delivered_at: null, level_before_l: null, level_after_l: null, delivered_estimated_l: "1.2",
+      measurement_method: null, last_latitude: -33, last_longitude: -70, last_position_at: "t", eta_s: 60,
+      created_at: "c", updated_at: "u",
+    });
+    expect(r).toMatchObject({ requestedVolumeL: 3.5, deliveredEstimatedL: 1.2, position: { latitude: -33 }, etaS: 60 });
+  });
+});

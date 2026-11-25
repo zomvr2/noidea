@@ -23,6 +23,12 @@ const DB_ERRORS: Record<string, [ContentfulStatusCode, string]> = {
   NO_ACTIVE_QUOTA: [409, "La familia no tiene cuota asignada para este período."],
   INSUFFICIENT_BALANCE: [409, "Saldo insuficiente."],
   WITHDRAWAL_NOT_FOUND: [404, "Retiro no encontrado."],
+  REFILL_NOT_FOUND: [404, "Recarga no encontrada."],
+  REFILL_ALREADY_OPEN: [409, "Este estanque ya tiene una recarga abierta."],
+  REFILL_TAKEN: [409, "Otro municipal ya tomó esta recarga."],
+  REFILL_ALREADY_ACTIVE: [409, "Ya tienes una recarga en curso."],
+  INVALID_REFILL_STATE: [409, "La recarga no está en un estado que permita esta acción."],
+  NOT_ASSIGNED: [403, "Esta recarga está asignada a otra persona."],
 };
 
 /** Convierte un error de Supabase/PostgREST en ApiError. */

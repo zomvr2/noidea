@@ -1,10 +1,14 @@
 import type { FamilyStatus, QuotaBalance } from "@noidea/shared";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import Animated from "react-native-reanimated";
 import { Icon } from "@/components/icon";
 import { LevelBar } from "@/components/level-bar";
 import { formatLitres } from "@/features/tanks/tank-status";
+import { enterUp, fadeIn, usePressScale, useUpdatePulse } from "@/lib/motion";
 import { colors, radius } from "@/theme";
 import { useQuota } from "./use-quota";
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 const MONTHS = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sept", "oct", "nov", "dic"];
 
@@ -38,6 +42,7 @@ const STATUS_NOTES: Partial<Record<FamilyStatus, string>> = {
  */
 export function QuotaCard() {
   const { familyId, family, quota, loaded, error } = useQuota();
+  const pulse = useUpdatePulse(quota?.availableL);
   if (familyId === null) return null;
 
   if (!loaded) {
@@ -54,7 +59,12 @@ export function QuotaCard() {
   const tone = low ? "#FFC966" : colors.accent;
 
   return (
-    <View style={styles.card} accessible accessibilityLabel={quota ? quotaA11y(quota) : "Sin cuota vigente"}>
+    <Animated.View
+      entering={fadeIn}
+      style={styles.card}
+      accessible
+      accessibilityLabel={quota ? quotaA11y(quota) : "Sin cuota vigente"}
+    >
       <View style={styles.header}>
         <Text style={styles.overline} numberOfLines={1}>
           Cuota familiar{family ? ` · ${family.name}` : ""}
@@ -74,7 +84,9 @@ export function QuotaCard() {
           <View style={styles.stats}>
             <View>
               <Text style={styles.label}>Disponible</Text>
-              <Text style={[styles.value, low && { color: tone }]}>≈ {formatLitres(quota.availableL)}</Text>
+              <Animated.Text style={[styles.value, low && { color: tone }, pulse]}>
+                ≈ {formatLitres(quota.availableL)}
+              </Animated.Text>
             </View>
             <View style={styles.right}>
               <Text style={styles.label}>Asignado</Text>
@@ -100,7 +112,7 @@ export function QuotaCard() {
           <Text style={styles.noteText}>{statusNote}</Text>
         </View>
       )}
-    </View>
+    </Animated.View>
   );
 }
 
@@ -111,21 +123,26 @@ function quotaA11y(q: QuotaBalance): string {
 /** Píldora compacta de cuota para el mapa. Toca para ir al perfil. */
 export function QuotaPill({ onPress }: { onPress: () => void }) {
   const { familyId, quota, loaded } = useQuota();
+  const { onPressIn, onPressOut, scaleStyle } = usePressScale(0.95);
+  const pulse = useUpdatePulse(quota?.availableL);
   if (familyId === null || !loaded) return null;
 
   const low = quota !== null && availablePercent(quota) < LOW_QUOTA_PERCENT;
   return (
-    <Pressable
+    <AnimatedPressable
+      entering={enterUp()}
       onPress={onPress}
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
       accessibilityRole="button"
       accessibilityLabel={quota ? quotaA11y(quota) : "Sin cuota vigente"}
       accessibilityHint="Abre tu perfil"
-      style={({ pressed }) => [styles.pill, pressed && styles.pillPressed]}
+      style={[styles.pill, scaleStyle]}
     >
       <View style={[styles.pillIcon, low && { backgroundColor: colors.warningSoft }]}>
         <Icon name="tankFilled" size={14} color={low ? colors.warning : colors.primary} />
       </View>
-      <Text style={styles.pillText}>
+      <Animated.Text style={[styles.pillText, pulse]}>
         {quota ? (
           <>
             <Text style={styles.pillStrong}>≈ {formatLitres(quota.availableL)}</Text> de tu cuota
@@ -133,9 +150,9 @@ export function QuotaPill({ onPress }: { onPress: () => void }) {
         ) : (
           "Sin cuota vigente"
         )}
-      </Text>
+      </Animated.Text>
       <Icon name="chevronRight" size={14} color={colors.subtle} />
-    </Pressable>
+    </AnimatedPressable>
   );
 }
 
@@ -173,7 +190,6 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     backgroundColor: colors.surface,
   },
-  pillPressed: { opacity: 0.8 },
   pillIcon: {
     width: 30,
     height: 30,

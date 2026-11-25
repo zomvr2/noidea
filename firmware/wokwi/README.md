@@ -2,7 +2,7 @@
 
 | Archivo | Qué es |
 |---|---|
-| `diagram.json` | Circuito completo para Wokwi (ESP32 DevKitC V4, mismos pines que `noidea_esp32/config.h`) |
+| `diagram.json` | Circuito completo para Wokwi (ESP32 DevKit V1 de 30 pines, mismos pines que `noidea_esp32/config.h`) |
 | `sketch.ino` | **Banco de pruebas** del cableado: no es el firmware del dispensador (sin Wi-Fi ni Supabase) |
 | `libraries.txt` | Librerías que Wokwi debe instalar para `sketch.ino` |
 
@@ -20,7 +20,10 @@ Tabla de conexiones, verificación de tensiones/corrientes y montaje en protoboa
 
 ## Convenciones del diagrama
 
-- Rojo = 5 V del USB (riel superior) · naranja = 5 V de la fuente externa (riel inferior, solo servo) · negro = GND.
+- Muestra el **montaje actual con el kit** (ver `docs/circuito.md` §0): HC-SR04 a 5 V con divisor de
+  3 × 1,5 kΩ en el ECHO, servo con batería portátil (a través del Arduino UNO) y sin condensador ni conversor I2C.
+- Rojo = 5 V del USB (riel superior) · naranja = 5 V de la batería portátil vía UNO (riel inferior, solo
+  servo) · negro = GND.
 - El **potenciómetro** representa el sensor de nivel resistivo (Wokwi no tiene esa pieza).
 - La fuente externa, el condensador de 470 µF, el conversor de niveles I2C y el caudalímetro no existen en Wokwi:
   van como etiquetas o se omiten. Sus conexiones reales están en `docs/circuito.md`.

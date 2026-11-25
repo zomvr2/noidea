@@ -23,12 +23,16 @@ const ICONS = {
   clock: { ios: "clock", android: "schedule" },
   chevronRight: { ios: "chevron.right", android: "chevron_right" },
   close: { ios: "xmark", android: "close" },
+  trash: { ios: "trash", android: "delete" },
   eye: { ios: "eye", android: "visibility" },
   eyeOff: { ios: "eye.slash", android: "visibility_off" },
   mail: { ios: "envelope", android: "mail" },
   lock: { ios: "lock", android: "lock" },
   logout: { ios: "rectangle.portrait.and.arrow.right", android: "logout" },
   capacity: { ios: "cylinder", android: "propane_tank" },
+  truck: { ios: "truck.box.fill", android: "local_shipping" },
+  refill: { ios: "arrow.down.to.line.circle", android: "water_full" },
+  people: { ios: "person.2", android: "group" },
 } as const satisfies Record<string, { ios: string; android: string }>;
 
 export type IconName = keyof typeof ICONS;
